@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Reflection;
-using FishNet.Object.Synchronizing;
 using NUnit.Framework;
 using SS3D.Systems;
 using SS3D.Systems.Inventory.Containers;
@@ -10,10 +9,11 @@ using UnityEngine;
 namespace EditorTests
 {
     /// <summary>
-    /// A move between two containers (pocket to toolbox) syncs two network objects, so a client can run the new
-    /// container's add before the old container's remove. The late remove must leave the item hidden, frozen and
-    /// parented where the add put it (playtest: a gas mask dragged from a pocket into a toolbox hung visible
-    /// under the toolbox).
+    /// A move between two containers (pocket to toolbox) used to sync as two container SyncList callbacks that a client
+    /// could run in either order; a late remove re-showed the item under the new container (playtest gas mask,
+    /// henkhooft/SS3D#208). Placement now follows one replicated holder per item (tech-debt P4.4), applied by
+    /// <see cref="ItemPlacementApplier"/>. These cases drive the applier directly: a move is one transition, and a repeat
+    /// (a late callback refreshing the same holder) changes nothing.
     /// </summary>
     public class ContainerMoveOrderTests
     {
@@ -31,59 +31,100 @@ namespace EditorTests
         }
 
         [Test]
-        public void LateRemoveFromTheOldContainer_LeavesTheItemInTheNewOne()
+        public void MoveToAnotherContainer_EndsInTheNewOne()
         {
             AttachedContainer pocket = CreateContainer("Pocket", attachItems: false);
             AttachedContainer toolbox = CreateContainer("Toolbox", attachItems: true);
             Item mask = CreateItem(out MeshRenderer renderer, out BoxCollider collider);
 
-            Sync(pocket, SyncListOperation.Add, default, new StoredItem(mask, Vector2Int.zero));
-            Sync(toolbox, SyncListOperation.Add, default, new StoredItem(mask, Vector2Int.zero));
-            Sync(pocket, SyncListOperation.RemoveAt, new StoredItem(mask, Vector2Int.zero), default);
+            ItemPlacementApplier.Apply(mask, pocket, hidden: false);
+            ItemPlacementApplier.Apply(mask, toolbox, hidden: false);
 
-            Assert.IsFalse(renderer.enabled, "Still hidden inside the toolbox");
-            Assert.IsFalse(collider.enabled, "Still frozen inside the toolbox");
-            Assert.AreEqual(toolbox.transform, mask.transform.parent, "Still parented to the toolbox");
-            Assert.AreEqual(toolbox, mask.LocalHolder);
+            Assert.IsFalse(renderer.enabled, "Hidden inside the toolbox");
+            Assert.IsFalse(collider.enabled, "Frozen inside the toolbox");
+            Assert.AreEqual(toolbox.transform, mask.transform.parent, "Parented to the toolbox");
+            Assert.AreEqual(toolbox, mask.AppliedHolder);
         }
 
         [Test]
-        public void RemoveThenAdd_StillEndsInTheNewContainer()
+        public void RepeatingTheSameHolder_ChangesNothing()
         {
             AttachedContainer pocket = CreateContainer("Pocket", attachItems: false);
             AttachedContainer toolbox = CreateContainer("Toolbox", attachItems: true);
             Item mask = CreateItem(out MeshRenderer renderer, out BoxCollider collider);
+            int detachedFromPocket = 0;
+            int attachedToToolbox = 0;
+            pocket.OnItemDetached += (_, _) => detachedFromPocket++;
+            toolbox.OnItemAttached += (_, _) => attachedToToolbox++;
 
-            Sync(pocket, SyncListOperation.Add, default, new StoredItem(mask, Vector2Int.zero));
-            Sync(pocket, SyncListOperation.RemoveAt, new StoredItem(mask, Vector2Int.zero), default);
-            Sync(toolbox, SyncListOperation.Add, default, new StoredItem(mask, Vector2Int.zero));
+            ItemPlacementApplier.Apply(mask, pocket, hidden: false);
+            ItemPlacementApplier.Apply(mask, toolbox, hidden: false);
+            ItemPlacementApplier.Apply(mask, toolbox, hidden: false);
 
+            Assert.AreEqual(1, detachedFromPocket, "The pocket lets go once");
+            Assert.AreEqual(1, attachedToToolbox, "The toolbox takes it once");
             Assert.IsFalse(renderer.enabled);
             Assert.IsFalse(collider.enabled);
             Assert.AreEqual(toolbox.transform, mask.transform.parent);
         }
 
         [Test]
-        public void RemoveIntoTheWorld_ShowsAndReleasesTheItem()
+        public void LeavingIntoTheWorld_ShowsAndReleasesTheItem()
         {
             AttachedContainer toolbox = CreateContainer("Toolbox", attachItems: true);
             Item mask = CreateItem(out MeshRenderer renderer, out BoxCollider collider);
 
-            Sync(toolbox, SyncListOperation.Add, default, new StoredItem(mask, Vector2Int.zero));
-            Sync(toolbox, SyncListOperation.RemoveAt, new StoredItem(mask, Vector2Int.zero), default);
+            ItemPlacementApplier.Apply(mask, toolbox, hidden: false);
+            ItemPlacementApplier.Apply(mask, null, hidden: false);
 
             Assert.IsTrue(renderer.enabled);
             Assert.IsTrue(collider.enabled);
             Assert.IsNull(mask.transform.parent);
-            Assert.IsNull(mask.LocalHolder);
+            Assert.IsNull(mask.AppliedHolder);
         }
 
-        private static void Sync(AttachedContainer container, SyncListOperation op, StoredItem oldItem, StoredItem newItem)
+        [Test]
+        public void Transit_HidesAndFreezesOutsideAnyContainer_ThenReleases()
         {
-            MethodInfo handler = typeof(AttachedContainer).GetMethod("HandleStoredItemsChanged",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(handler, "AttachedContainer.HandleStoredItemsChanged");
-            handler.Invoke(container, new object[] { op, 0, oldItem, newItem, false });
+            Item mask = CreateItem(out MeshRenderer renderer, out BoxCollider collider);
+
+            ItemPlacementApplier.Apply(mask, null, hidden: true);
+            Assert.IsFalse(renderer.enabled, "Hidden in the pipes");
+            Assert.IsFalse(collider.enabled, "Frozen in the pipes");
+            Assert.IsNull(mask.transform.parent);
+
+            ItemPlacementApplier.Apply(mask, null, hidden: false);
+            Assert.IsTrue(renderer.enabled, "Shown at the outlet");
+            Assert.IsTrue(collider.enabled, "Physical at the outlet");
+        }
+
+        // A late joiner can spawn the item before its container: the item waits hidden, then goes in when the
+        // container starts.
+        [Test]
+        public void WaitingForTheContainer_ThenEntering_EndsInTheContainer()
+        {
+            AttachedContainer toolbox = CreateContainer("Toolbox", attachItems: true);
+            Item mask = CreateItem(out MeshRenderer renderer, out BoxCollider collider);
+
+            ItemPlacementApplier.Apply(mask, null, hidden: true);
+            ItemPlacementApplier.Apply(mask, toolbox, hidden: false);
+
+            Assert.IsFalse(renderer.enabled);
+            Assert.IsFalse(collider.enabled);
+            Assert.AreEqual(toolbox.transform, mask.transform.parent);
+            Assert.AreEqual(toolbox, mask.AppliedHolder);
+        }
+
+        [Test]
+        public void ALooseItemThatWasNeverPlaced_IsLeftAlone()
+        {
+            Item charge = CreateItem(out MeshRenderer renderer, out BoxCollider collider);
+            collider.enabled = false; // a mounted or anchored item manages its own physics
+
+            ItemPlacementApplier.Apply(charge, null, hidden: false);
+
+            Assert.IsFalse(collider.enabled, "No unfreeze for an item no container ever held");
+            Assert.IsTrue(renderer.enabled);
         }
 
         private AttachedContainer CreateContainer(string name, bool attachItems)

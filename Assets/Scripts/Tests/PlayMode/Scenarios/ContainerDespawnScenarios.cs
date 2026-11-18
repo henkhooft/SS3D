@@ -39,7 +39,7 @@ namespace SS3D.Tests
             Assert.AreEqual(prefabKinematic, prefab.GetComponent<Rigidbody>().isKinematic, "The prefab is not frozen");
             CollectionAssert.AreEqual(prefabRenderers, prefab.GetComponentsInChildren<Renderer>(true).Select(r => r.enabled).ToArray(),
                 "The prefab is not hidden");
-            Assert.IsNull(prefab.LocalHolder, "No container claims the prefab");
+            Assert.IsNull(prefab.AppliedHolder, "No container claims the prefab");
         }
 
         // Guards: a station restore with a loose, filled backpack on the floor clears it and its contents instead of throwing (TileMap.ClearUntrackedItems, AttachedContainer.Purge; RE-SS3D/SS3D#1540). The backpack's contents are its children, so destroying it destroyed them while the loop still held them · Not cheaper because: needs real spawned items in a real container on the live tile map

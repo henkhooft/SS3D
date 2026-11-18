@@ -240,6 +240,26 @@ namespace SS3D.Systems.Inventory.Containers
             _storedItems.OnChange += HandleStoredItemsChanged;
         }
 
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+
+            // Items stored before this container spawned got a holder without its object id: stamp it now.
+            foreach (StoredItem storedItem in _storedItems)
+            {
+                if (storedItem.Item != null)
+                {
+                    storedItem.Item.SetContainer(this);
+                }
+            }
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            ItemPlacementApplier.ContainerStarted(this);
+        }
+
         protected override void OnDisabled()
         {
             // Mostly used to allow inventory to update accessible containers.
@@ -310,8 +330,8 @@ namespace SS3D.Systems.Inventory.Containers
         /// <param name="newItem">Element after the change</param>
         private void HandleStoredItemsChanged(SyncListOperation op, int index, StoredItem oldItem, StoredItem newItem, bool asServer)
         {
-            // A late read after a same-tick despawn hands the client prefab assets; hiding, freezing or reparenting
-            // one would write into the asset (inventory.md pitfall), so drop the change.
+            // A late read after a same-tick despawn hands the client prefab assets; listeners would read (and the old
+            // placement code wrote into) the asset (inventory.md pitfall), so drop the change.
             if (!asServer && (IsPrefabAsset(oldItem.Item) || IsPrefabAsset(newItem.Item)))
             {
                 return;
@@ -323,7 +343,6 @@ namespace SS3D.Systems.Inventory.Containers
             {
                 case SyncListOperation.Add:
                     changeType = ContainerChangeType.Add;
-					handleItemAdded(newItem.Item);
 					break;
                 case SyncListOperation.Insert:
 					break;
@@ -332,11 +351,9 @@ namespace SS3D.Systems.Inventory.Containers
 					break;
                 case SyncListOperation.RemoveAt:
 					changeType = ContainerChangeType.Remove;
-					handleItemRemoved(oldItem.Item);
 					break;
 				case SyncListOperation.Clear:
                     changeType = ContainerChangeType.Remove;
-					handleItemRemoved(oldItem.Item);
 					break;
                 case SyncListOperation.Complete:
 					break;
@@ -344,19 +361,9 @@ namespace SS3D.Systems.Inventory.Containers
                     throw new ArgumentOutOfRangeException(nameof(op), op, null);
             }
 
-            if (changeType == ContainerChangeType.Add && newItem.Item.TryGetComponent(out NetworkTransform networkTransform))
-            {
-                 networkTransform.SetSynchronizePosition(false);
-                 networkTransform.SetSynchronizeRotation(false);
-            }
-
+            // Placement (parent, visibility, freeze, NetworkTransform sync) follows the item's own replicated holder
+            // through ItemPlacementApplier, not this list (tech-debt P4.4): the list only raises content events.
             // SyncList.Clear reports a single change with default items, so oldItem.Item is null there.
-            if (changeType == ContainerChangeType.Remove && oldItem.Item != null && oldItem.Item.TryGetComponent(out NetworkTransform networkTransform2))
-            {
-                networkTransform2.SetSynchronizePosition(true);
-                networkTransform2.SetSynchronizeRotation(true);
-                //Punpun.Information(this, "from container " + this.gameObject + ", removing item" + oldItem.Item?.name);
-            }
 
 			if (changeType == ContainerChangeType.None) {
 				return;
@@ -367,81 +374,6 @@ namespace SS3D.Systems.Inventory.Containers
 
         [ServerOrClient]
         private static bool IsPrefabAsset(Item item) => item != null && !item.IsSceneInstance;
-
-        private void handleItemRemoved(Item item)
-        {
-
-			if (item == null) return;
-
-            // A move between two containers (pocket to toolbox) syncs two network objects, and a client can
-            // get the new container's add first. The item then already belongs to that container: showing,
-            // unparenting or unfreezing it here would leave it visible, physical and stuck to the new holder.
-            bool movedOn = item.LocalHolder != null && item.LocalHolder != this;
-            if (!movedOn)
-            {
-                item.LocalHolder = null;
-
-                // Restore visibility
-                if (HideItems)
-                {
-                    item.SetVisibility(true);
-                }
-
-                // Remove parent if child of this
-                if (item.transform.parent == transform)
-                {
-                    item.transform.SetParent(null, true);
-                }
-            }
-
-            ProcessItemDetached(item);
-            if (!movedOn)
-            {
-                item.ApplyRestScale();
-                item.Unfreeze();
-            }
-        }
-
-        [ServerOrClient]
-        private void handleItemAdded(Item item)
-        {
-			if (item == null) return;
-
-            item.LocalHolder = this;
-			item.Freeze();
-
-            // Remove PlacedItemObject component if it exists to prevent saving items in containers
-            PlacedItemObject placedItemObject = item.GetComponent<PlacedItemObject>();
-            if (placedItemObject != null)
-            {
-                // Remove from TileMap tracking
-                TileMap tileMap = SubSystems.GetOrNull<TileSubSystem>()?.CurrentMap;
-                if (tileMap != null)
-                {
-                    tileMap.RemovePlacedItemFromTracking(placedItemObject);
-                }
-                
-                // Destroy the PlacedItemObject component
-                DestroyImmediate(placedItemObject);
-            }
-
-            // Make invisible
-            if (HideItems)
-            {
-                item.SetVisibility(false);
-            }
-
-            if (AttachItems)
-            {
-                if (!HasCustomDisplay)
-                {
-                    Transform itemTransform = item.transform;
-                    itemTransform.SetParent(transform, false);
-                    itemTransform.localPosition = AttachmentOffset;
-                }
-                ProcessItemAttached(item);
-            }
-        }
 
 		/// <summary>
 		/// Places an item into this container in the first available position
@@ -647,11 +579,13 @@ namespace SS3D.Systems.Inventory.Containers
 
             if (!ignoreConditions && !CanRemoveItem(storedItem.Item)) return false;
 
-            storedItem.Item.SetContainer(null);
             lock (_modificationLock)
             {
                 _storedItems.RemoveAt(index);
             }
+
+            // After the list changed, as the old SyncList callback ran: detach listeners see the item gone.
+            storedItem.Item.SetContainer(null);
             return true;
            
         }

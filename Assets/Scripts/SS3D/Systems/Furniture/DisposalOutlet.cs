@@ -134,16 +134,8 @@ namespace SS3D.Systems.Furniture
                 return;
             }
 
-            if (SubSystems.TryGet(out DisposalSubSystem disposalSubSystem))
-            {
-                disposalSubSystem.RevealItem(item);
-            }
-            else
-            {
-                item.SetVisibility(true);
-            }
-
-            item.Unfreeze();
+            // Leaves the pipes: shown and physical again on every peer.
+            item.ServerSetInTransit(false);
             SpitItemOut(item);
 
             // Main outlet: schedule space-eject / Cargo sweep after the grace window.

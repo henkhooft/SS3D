@@ -190,8 +190,7 @@ namespace SS3D.Systems.Furniture.Disposal
                 return;
             }
 
-            RevealItem(capsule.Item);
-            capsule.Item.Unfreeze();
+            capsule.Item.ServerSetInTransit(false);
         }
 
         /// <summary>
@@ -249,21 +248,19 @@ namespace SS3D.Systems.Furniture.Disposal
                 return false;
             }
 
-            item.Freeze();
-            SetTransitVisibility(item, visible: _debugShowTransitItems);
+            // Transit is part of the item's replicated holder: hidden and frozen on every peer, late joiners included.
+            item.ServerSetInTransit(true);
+            if (_debugShowTransitItems)
+            {
+                SetTransitVisibility(item, visible: true);
+            }
+
             DisposalCapsule capsule = new(item, destination, networkId, path);
             _activeCapsules.Add(capsule);
             return true;
         }
 
-        /// <summary>
-        /// Makes a transit item visible again (outlet spit, pipe-cut spill, or failed destination).
-        /// </summary>
-        public void RevealItem(Item item)
-        {
-            SetTransitVisibility(item, visible: true);
-        }
-
+        /// <summary>Debug only (<see cref="_debugShowTransitItems"/>): overrides the transit hiding on observers.</summary>
         private void SetTransitVisibility(Item item, bool visible)
         {
             if (item == null || item.NetworkObject == null)
@@ -343,8 +340,7 @@ namespace SS3D.Systems.Furniture.Disposal
                 if (capsule.Item == null)
                     continue;
 
-                RevealItem(capsule.Item);
-                capsule.Item.Unfreeze();
+                capsule.Item.ServerSetInTransit(false);
                 capsule.Item.transform.position = spillPosition;
             }
         }

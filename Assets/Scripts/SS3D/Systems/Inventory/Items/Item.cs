@@ -123,9 +123,14 @@ namespace SS3D.Systems.Inventory.Items
         private readonly SyncList<Trait> _traits = new();
 
         /// <summary>
-        /// Where the item is stored
+        /// Where the item is, packed (<see cref="ItemHolder.Pack"/>). Written only by the server, through
+        /// <see cref="SetContainer"/> and <see cref="ServerSetInTransit"/>; every peer applies it with
+        /// <see cref="ItemPlacementApplier"/>.
         /// </summary>
-        [SyncVar]
+        [SyncVar(OnChange = nameof(OnHolderChanged))]
+        private long _holder;
+
+        /// <summary>The server's container, or on a client the container <see cref="_holder"/> resolved to (null until spawned there).</summary>
         private AttachedContainer _container;
 
         public string Name
@@ -176,16 +181,21 @@ namespace SS3D.Systems.Inventory.Items
         public ReadOnlyCollection<Trait> Traits => ((List<Trait>) _traits.Collection).AsReadOnly();
 
         /// <summary>
-        /// Where the item is stored
+        /// Where the item is stored. On a client, null while the container isn't spawned there yet.
         /// </summary>
         public AttachedContainer Container => _container;
 
-        /// <summary>
-        /// On this peer, the container whose add callback last took the item in (hid, froze and parented it).
-        /// <see cref="Container"/> is server-only, and on a client the two containers' callbacks for one move
-        /// arrive in either order, so a late remove from the old container checks this before undoing anything.
-        /// </summary>
-        public AttachedContainer LocalHolder { get; internal set; }
+        /// <summary>The replicated holder: a container, the disposal pipes, or none.</summary>
+        public ItemHolder Holder => ItemHolder.Unpack(_holder);
+
+        /// <summary>On this peer, the container <see cref="ItemPlacementApplier"/> last placed the item in.</summary>
+        public AttachedContainer AppliedHolder { get; internal set; }
+
+        /// <summary>On this peer, whether the applier last hid and froze the item outside any container.</summary>
+        internal bool AppliedHidden { get; set; }
+
+        /// <summary>The unspawned container this client is waiting for, if any.</summary>
+        internal int? PendingContainerObjectId { get; set; }
 
         private bool _initialised = false;
         
@@ -360,12 +370,36 @@ namespace SS3D.Systems.Inventory.Items
                 _stackCount = ItemStackRules.ClampCount(_initialStackCount, _maxStackSize);
             }
             if (_rigidbody != null) AtmosLooseBodies.Register(_rigidbody);
+
+            // Added to a container before it was spawned: apply now.
+            ItemPlacementApplier.Refresh(this);
         }
 
         public override void OnStopServer()
         {
             if (_rigidbody != null) AtmosLooseBodies.Unregister(_rigidbody);
             base.OnStopServer();
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            ItemPlacementApplier.Refresh(this);
+        }
+
+        public override void OnStopClient()
+        {
+            ItemPlacementApplier.Forget(this);
+            base.OnStopClient();
+        }
+
+        private void OnHolderChanged(long previous, long next, bool asServer)
+        {
+            // The server applied when it set the value.
+            if (!asServer)
+            {
+                ItemPlacementApplier.Refresh(this);
+            }
         }
 
         public override void Update()
@@ -519,27 +553,6 @@ namespace SS3D.Systems.Inventory.Items
             }
         }
         
-        /// <summary>
-        /// Removes any interaction outline shells (added by <see cref="SS3D.Systems.Interactions.InteractionOutlineView"/>)
-        /// from a preview clone, so they can't leak into generated icons.
-        /// Must DestroyImmediate: Coimbra Dispose → Destroy is end-of-frame, but the preview camera
-        /// renders in this frame while hover shells are still enabled.
-        /// </summary>
-        private static void RemoveInteractionOutlines(Transform root)
-        {
-            for (int i = root.childCount - 1; i >= 0; i--)
-            {
-                Transform child = root.GetChild(i);
-                if (child.name == SS3D.Systems.Interactions.InteractionOutlineView.OutlineObjectName)
-                {
-                    UnityEngine.Object.DestroyImmediate(child.gameObject);
-                    continue;
-                }
-
-                RemoveInteractionOutlines(child);
-            }
-        }
-
         /// <param name="visible">Should the item be visible</param>
         [ServerOrClient]
         public void SetVisibility(bool visible)
@@ -698,12 +711,37 @@ namespace SS3D.Systems.Inventory.Items
 
         /// <summary>
         /// Modify the container of this item, can pass null to make this item not depending on any container.
+        /// Only <see cref="AttachedContainer"/> calls this, after it changed its list; placement follows on every peer.
         /// </summary>
         [Server]
         public void SetContainer(AttachedContainer newContainer)
         {
             _container = newContainer;
+            _holder = (newContainer == null || newContainer.NetworkObject == null
+                ? ItemHolder.None
+                : ItemHolder.InContainer(newContainer.NetworkObject.ObjectId, newContainer.ComponentIndex)).Pack();
+            ItemPlacementApplier.Refresh(this);
         }
+
+        /// <summary>
+        /// Puts a loose item into the disposal pipes (hidden, frozen) or takes it out (loose again). An item in a
+        /// container must leave it first.
+        /// </summary>
+        [Server]
+        public void ServerSetInTransit(bool inTransit)
+        {
+            if (_container != null)
+            {
+                Log.Warning(this, "{item} is in {container}; take it out before it rides the pipes", Logs.Generic, name, _container.name);
+                return;
+            }
+
+            _holder = (inTransit ? ItemHolder.Transit : ItemHolder.None).Pack();
+            ItemPlacementApplier.Refresh(this);
+        }
+
+        /// <summary>Client side: the container the holder resolved to (see <see cref="ItemPlacementApplier"/>).</summary>
+        internal void SetResolvedContainer(AttachedContainer container) => _container = container;
 
         /// <summary>
         /// Whether this item and <paramref name="other"/> are the same stackable definition and could
@@ -771,121 +809,7 @@ namespace SS3D.Systems.Inventory.Items
 
         // Generate preview of the same object, but without stored items.
         [ServerOrClient]
-        public Sprite GenerateIcon(bool useWornShapedForm = false)
-        {
-#if UNITY_SERVER
-            // Icon generation renders a camera to produce a preview texture, which is unavailable and
-            // unnecessary on a dedicated server (no shaders are included in the build for it to use).
-            return null;
-#else
-            // Same for headless / -nographics clients (multiplayer harness): NullGfxDevice cannot
-            // run RuntimePreviewGenerator without URP GraphicsBuffer/Blitter exceptions.
-            if (UnityEngine.Application.isBatchMode
-                || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
-            {
-                return null;
-            }
-
-            Quaternion previousPreviewRotation = RuntimePreviewGenerator.PreviewRotation;
-            RuntimePreviewGenerator.PreviewRotation = IconRotation;
-
-            // Find stored items
-            AttachedContainer[] containers = GetComponentsInChildren<AttachedContainer>();
-            // If stored items are found, temporarily set their parents to null,
-            // so IconPreviewGenerator won't generate stored items
-            Dictionary<Transform, Transform> storedItemsWithParents = new Dictionary<Transform, Transform>();
-            Transform previewObject = null;
-            Sprite icon = null;
-            try
-            {
-                foreach (AttachedContainer attachedContainer in containers)
-                {
-                    IEnumerable<Item> storedItems = attachedContainer.Items;
-                    foreach (Item item in storedItems)
-                    {
-                        Transform itemTransform = item.transform;
-                        storedItemsWithParents.Add(itemTransform, itemTransform.parent);
-                    }
-                }
-                foreach (Transform storedItem in storedItemsWithParents.Keys)
-                {
-                    storedItem.parent = null;
-                }
-
-                // Stay in a loaded scene until bake finishes. HideAndDontSave makes
-                // scene.IsValid() false, so RuntimePreviewGenerator re-clones; ClothingItemPresentation.Awake
-                // then ApplyWorldForm and a worn bake becomes the folded pile again.
-                previewObject = Instantiate(transform, null, false);
-                RemoveInteractionOutlines(previewObject);
-                Item previewItem = previewObject.GetComponent<Item>();
-                if (previewItem.TryGetComponent(out ClothingItemPresentation presentation))
-                {
-                    presentation.PrepareIconPreview(useWornShapedForm);
-                }
-                if (useWornShapedForm && presentation != null)
-                {
-                    // Bypass SetVisibility — that re-applies world (folded) form.
-                    presentation.ApplyWornShapedForm();
-                    SetChildRenderersEnabled(previewObject, true);
-                }
-                else
-                {
-                    previewItem.SetVisibility(true);
-                }
-
-                try
-                {
-                    // Bright full-toon ObjectIcon — not live half-toon world mats.
-                    Texture2D texture = IconPreviewGenerator.Generate(previewObject, 128, 128);
-                    if (texture == null)
-                    {
-                        Log.Warning(this, "Can't generate icon for " + name + ".");
-                        icon = null;
-                    }
-                    else
-                    {
-                        icon = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
-                            new Vector2(0.5f, 0.5f), 100);
-                        icon.name = transform.name;
-                    }
-                }
-                catch (NullReferenceException)
-                {
-                    Log.Warning(this, "Can't generate icon for " + name + ".");
-                    icon = null;
-                }
-            }
-            finally
-            {
-                RuntimePreviewGenerator.PreviewRotation = previousPreviewRotation;
-                if (previewObject != null)
-                {
-                    previewObject.gameObject.Dispose(false);
-                }
-                foreach (KeyValuePair<Transform, Transform> storedItemWithParent in storedItemsWithParents)
-                {
-                    storedItemWithParent.Key.parent = storedItemWithParent.Value;
-                }
-            }
-
-            return icon;
-#endif
-        }
-
-        private static void SetChildRenderersEnabled(Transform root, bool visible)
-        {
-            // includeInactive: worn-shaped clothing children start disabled; preview must enable them.
-            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
-            foreach (Renderer childRenderer in renderers)
-            {
-                if (SS3D.Systems.Interactions.InteractionOutlineView.IsOutlineRenderer(childRenderer))
-                {
-                    continue;
-                }
-
-                childRenderer.enabled = visible;
-            }
-        }
+        public Sprite GenerateIcon(bool useWornShapedForm = false) => ItemIconRenderer.Render(this, useWornShapedForm);
 
         /// <summary>
         /// Add a new trait to this and sync it

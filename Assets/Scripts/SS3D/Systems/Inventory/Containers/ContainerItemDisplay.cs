@@ -143,8 +143,8 @@ namespace SS3D.Systems.Inventory.Containers
             }
             else
             {
-                // The item already moved on (its new container's add arrived first on this client): it is
-                // parented there now, so leave it and only clear away our empty pivots.
+                // The item is not on our pivot (ItemPlacementApplier detaches before it attaches, so this is a
+                // pivot left over from an interrupted attach): leave the item alone and clear away empty pivots.
                 for (int i = display.childCount - 1; i >= 0; i--)
                 {
                     Transform child = display.GetChild(i);

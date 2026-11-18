@@ -45,7 +45,7 @@ high-value first; the large splits after the contracts they depend on exist.
    weapon-state mutation ([§1.9](#19-god-classes-forming-in-hot-uiinteraction-code)), Examine catalog outside the umbrella rebuild ([§1.4](#14-ui-asset-catalog-pattern-copy-pasted-three-times-no-shared-infrastructure)).
 3. **Dead code:** done in tech-debt Phase 3 except unused `UiBinderBase` ([§1.29](#129-ui-widget-and-host-duplication)), which goes with P7.8.
 4. **Ownership contracts:** hand actions + upper-body pose ([§1.20](#120-hand-actions-and-upper-body-pose-have-no-single-owner)),
-   item holder ([§1.21](#121-item-holder-and-visibility-are-written-by-many-classes)).
+   item holder ([§1.21](#121-item-holder-and-visibility--2026-11-18)).
 5. **Assembly split by edge** ([§1.24](#124-ss3dsystems-is-one-tangled-assembly)), then the god-class
    splits in §1.9.
 
@@ -395,20 +395,9 @@ server/client eye delta; the margin itself waits on playtest logs (plan Q5).
 declare their own animation hint; the server fires one-shots after validating; IK reads one
 upper-body model (M–L).
 
-### 1.21 Item holder and visibility are written by many classes
+### 1.21 Item holder and visibility are written by many classes — resolved 2026-11-18
 
-**Blast radius: medium — trend: recurring bugs (henkhooft/SS3D#203, #208)**
-
-Where an item is held and whether it renders is set by `AttachedContainer` (add/remove plus
-NetworkTransform toggles, `:338-432`), `ContainerItemDisplay` (`:105-122`, `:171-197`),
-`DisposalSubSystem` (`:199-352`) and `DisposalOutlet` (`:143-146`). Release-to-world was three
-copies until 2026-11-18; `ItemRelease.ServerReleaseToWorld` is now the one path (tech-debt P4.4 step A), and the
-drop key and collapse dump, which skipped tile-map tracking and (drop key) kept the owner, now match the rest.
-Throws are still tracked, and saved, at their release point (`PlacedItemObject` stores the pose it was placed at).
-The henkhooft/SS3D#208 fix guards out-of-order network arrival with a per-peer `Item.LocalHolder`
-(`AttachedContainer.cs:368`) instead of one replicated holder.
-
-**Fix:** a replicated holder on `Item`, applied by one routine on every peer (M–L). The one release path is done.
+See §6. Not yet run in an Editor.
 
 ### 1.22 Map Editor trusts the client's partial map and assumes every command succeeded
 
@@ -730,3 +719,23 @@ fails when any other source names FishNet's `_networkBehaviours` list.
   Human.prefab's 97 body-part overrides hold. `ForNestedPrefab` keeps that as an explicit
   `writeNetworkObjectReferences` argument; settling one rule needs an Editor run that compares a re-saved Human.prefab.
 - Related: [combat.md](systems/combat.md), [entities.md](systems/entities.md), [core-subsystems.md](systems/core-subsystems.md)
+
+### 1.21 Item holder and visibility — 2026-11-18
+
+Each `Item` replicates one holder (`ItemHolder`: a container by NetworkObject id and component index, disposal
+transit, or none) in a single `long` SyncVar, written only by `Item.SetContainer` (from `AttachedContainer`'s add and
+remove) and `Item.ServerSetInTransit` (disposal). `ItemPlacementApplier` applies it on every peer: parent, visibility,
+colliders and physics, NetworkTransform sync, and the container's attach / detach events. `AttachedContainer`'s
+SyncList callback only raises content events now, `Item.LocalHolder` is gone (the applier's own record,
+`AppliedHolder`, replaces it), and disposal transit no longer hides items with an unbuffered RPC. Release to the world
+is one path, `ItemRelease.ServerReleaseToWorld`. Protocol 66.
+
+- **Closed by:** tech-debt P4.4 (steps A and B). Tests: `ContainerMoveOrderTests` (the henkhooft/SS3D#208 cases, on the
+  applier), `ItemHolderTests`, `InteractionAnimationScenarios.EveryReleaseKind_LeavesTheItemOnTheMap`.
+- **Validation still owed:** written without an Editor. Needs `compile,editmode`, `scenarios:Combat`, `scenarios:Explosives`,
+  `mppm:late-join` (items in containers and in transit for a late joiner) and an owner hand check of pickup, drop,
+  throw, lockers and disposal.
+- **Not in this close:** `ContainerItemDisplay` still parents held items onto its grip pivot, as the applier's attach
+  step for custom displays. Throws are tracked, and saved, at their release point (`PlacedItemObject` stores the pose it
+  was placed at). Anchoring (`Nuke`, `SyndicateBomb`) keeps its own `Freeze` / `Unfreeze`.
+- Related: [inventory.md](systems/inventory.md), [disposal.md](systems/disposal.md)
