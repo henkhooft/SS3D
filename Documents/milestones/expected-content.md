@@ -21,7 +21,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 |---|---|---|---|---|---|---|
 | N1 | Spawn geared: hardsuit, internals, magboots, gun, tools | must | done | in game | `P/Roles/Antags/nukeops.yml` `SyndicateOperativeGearFullNoUplink` | SS3D: C20R + Stechkin, full toolbelt, C4, minibomb |
 | N2 | Spare magazines in the kit | must | missing | none (magazine models only in reload animations) | `P/Catalog/UplinkCatalog/ammo.yml` | `antagonist-content.md` §6 first pass promises spare magazines; no loadout carries one. Blocked on M1c physical magazines |
-| N3 | Pinpointer toward the disk | must | missing | SS3D-Art `locator` | `P/Entities/Objects/Devices/pinpointer.yml` `PinpointerSyndicateNuclear` | `antagonist-content.md` §6 **first pass** says every operative carries one; MVP1 calls it "thin". 3D form ⚑ (held arrow vs HUD compass) |
+| N3 | Pinpointer toward the disk | must | missing | SS3D-Art `locator` | `P/Entities/Objects/Devices/pinpointer.yml` `PinpointerSyndicateNuclear` | `antagonist-content.md` §6 **first pass** says every operative carries one; MVP1 calls it "thin". 3D form decided 2026-11-18: a HUD compass shown while the pinpointer is in hand (Decision 2) |
 | N4 | Team radio channel | expected | missing | — | `P/Roles/Antags/nukeops.yml` `ClothingHeadsetAltSyndicate` | Operatives spawn with no headset. Needs radio gating (U14) to be meaningful |
 | N5 | Briefing and objective on spawn | expected | done | — | `L/…/preset-nukeops.ftl` `nukeops-briefing` | M4 squad draw and briefing |
 | N6 | Role split: Commander, Corpsman, Operative | expected | missing | — | `P/Roles/Antags/nukeops.yml` `NukeopsCommander`, `NukeopsMedic` | Corpsman kit (N7) and the war declarator (N13) hang off it |
@@ -109,7 +109,7 @@ Held back, so agents don't start them without the owner: door remote, Captain's 
 Each is a conflict between SS14 and a recorded SS3D decision. Agents don't settle these.
 
 1. ~~**Dragging bodies (U7).**~~ **Decided 2026-11-18: `must`, together with moving in zero-g (U31).** Pulling is core in SS14. Without it, the Doctor can't bring a downed crew member to safety and nobody can carry off a disk holder. The owner added zero-g movement: today, anyone who loses their footing without magboots ragdolls with no way to move. Still open: does it land before Playtest 1? That would pull it out of MVP1's feel-pass deferral.
-2. **Pinpointer (N3, C2).** `antagonist-content.md` §6 already lists it in the first pass, so the code is behind the design. Recommend `must`. You only need to choose the 3D form: a held item with an arrow (SS14), or a HUD compass while it's held.
+2. ~~**Pinpointer (N3, C2).**~~ **Decided 2026-11-18: `must`; a HUD compass shown while the pinpointer is in hand.** That's the easiest form for now; an arrow on the held model can come later. `antagonist-content.md` §6 already lists the pinpointer in the first pass, so the code is behind the design. The Captain's pinpointer (C2) is the same item.
 3. **Handcuffs (C7).** SS14 `must`; MVP1 defers it to MVP2; the §6 crew-win rule says "dead or restrained". Recommend `expected`, after Playtest 1, alongside U9 (put an item on another body).
 4. **Uplink (N12–N14).** SS14 `must`; the design calls it a later pass and MVP1 says no uplink. Recommend `must` for the gate after Playtest 1. It's the biggest operative-identity gap, and most of the stock already has SS3D-Art models. It needs a decision on where the uplink lives before the PDA exists (SS14 uses a radio).
 5. **Nuke code and anchoring (N10).** SS14 `must`; SS3D's design deliberately treats the device as a plain timed charge. Recommend keeping SS3D's rule and dropping the row.
@@ -121,16 +121,17 @@ Each is a conflict between SS14 and a recorded SS3D decision. Agents don't settl
 `must` and `expected` rows that are missing or partial, whose owner decision (if any) is made, and have art or need none. Agents pick from the top:
 
 1. **U7** pull and drag bodies and objects, and **U31** zero-g movement (owner-decided `must`)
-2. **C16** health analyzer scan: the item already ships in the Doctor's belt.
-3. **U14 + N4** radio gating plus an operative team channel.
-4. **U15** player emote trigger.
-5. **U23** seats: put `SeatAnchor` on the chairs that are already in game.
-6. **C9** flash (SS3D-Art model).
-7. **C20** emergency medipen.
-8. **U27** alert state on arm.
-9. **N17** hardsuit helmet toggle.
-10. **N6 + N7** operative roles and the Corpsman kit.
-11. **C4** Captain's announcement console.
+2. **N3 + C2** pinpointer with a HUD compass while it's in hand (owner-decided `must`)
+3. **C16** health analyzer scan: the item already ships in the Doctor's belt.
+4. **U14 + N4** radio gating plus an operative team channel.
+5. **U15** player emote trigger.
+6. **U23** seats: put `SeatAnchor` on the chairs that are already in game.
+7. **C9** flash (SS3D-Art model).
+8. **C20** emergency medipen.
+9. **U27** alert state on arm.
+10. **N17** hardsuit helmet toggle.
+11. **N6 + N7** operative roles and the Corpsman kit.
+12. **C4** Captain's announcement console.
 
 Already in flight elsewhere, don't duplicate: N2/C6 and C10 (M1c), U11 (M12), C8 (hand test).
 
