@@ -37,7 +37,7 @@ todos:
     status: completed
   - id: rig-proof
     content: "rig: PlayMode scenarios (extend EnvironmentScenarios): knockdown over space → Floating, wind push without knockdown, push-off back to plenum, throw while Floating gives Δv, wall/window/grille/airlock colliders on the reach layer; MPPM: remote drag through an airlock, remote float, owner disconnect mid-drag; run_smoketest.sh separate-client line for the remote drag"
-    status: pending
+    status: completed
   - id: docs-sync
     content: "blind: update-system-docs — entities, furniture (sweep Pitfall), interactions maps; M13 status; catalog U7/U31; animation-pass drag note (lockers draggable, IsDragging reads the SyncVar)"
     status: pending
@@ -170,6 +170,7 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 77 | The remote proof's dragger is a server-side combat dummy, so an MPPM host and a dedicated server run the same steps; the steps keep the body Downed with single rounds, because a body downed right at the line stands within ~7 s and that ends a drag by "target stood" | SS3D | `DragAutomation.KeepDown` |
 | 78 | The drag smoke line is `drag 1 nightly` in `smoke-set.txt`, so labelled-PR smoke runs don't grow | SS3D | testing philosophy D5 |
 | 79 | The zero-g scenarios suspend and restore the host's invincibility: a map-editor scenario earlier in the category leaves it on and a later one relies on it, and an invincible walker never floats | SS3D | `EntityInvincibility`; pre-existing test leak |
+| 80 | `docs-sync` was not run by the build session: `update-system-docs` is user-invoke-only, so the maps, M13 status and catalog rows U7/U31 wait for the owner's `/update-system-docs` | SS3D | skill frontmatter `disable-model-invocation` |
 
 ## Phases
 
