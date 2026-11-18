@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: throw-propel
     content: "blind: CmdThrow resolves Δv for a Floating thrower and TargetRpcs it to the owner, which calls AddCoastImpulse"
-    status: pending
+    status: completed
   - id: body-drag-core
     content: "blind: body drag component (generalised Draggable or BodyDraggable): server computes the tether point and routes it to the target's physics authority (owner while alive, server for corpses and disconnected owners); CC/Downed mover with collision; ragdoll hips force for Critical/dead; re-send when > 1.5 m off; server-set IsBeingDragged snapshot bit (InteractWork pattern); Downed owner skips the crawl drive while it's set; end rules wired (dragger downed/knocked/dead, break, despawn, target stands, either party Floating, release)"
     status: pending
@@ -137,6 +137,9 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 44 | Braking applies whenever a floating body is in reach with no keys held, also for one that never pressed any (R4 read literally: not holding keys = holding on) | taste | R4 |
 | 45 | Getting up over open space keeps the ragdoll hips' velocity as the coast, so a blown-out body keeps drifting instead of stopping dead | adaptation | R2 "bodies drift" |
 | 46 | Reach probe: a 1.5 m overlap sphere at the body's centre on the Default and Walls layers; "tile object" = a `PlacedTileObject` in the collider's parents | SS3D | `TagManager` layers 0 and 8 |
+| 47 | The throw recoil is resolved at release (`ServerLaunch`), not in `CmdThrow`, so a cancelled throw pushes nobody; the weight is read before the item leaves the hand | SS3D | Decision 13 of the animation pass (interrupted throws keep the item) |
+| 48 | A floating thrower with no owning client (combat dummy) gets no recoil | SS3D | owner-side movement |
+| 49 | One protocol bump (65 → 66) covers every wire change on this branch | SS3D | `ProtocolVersion` |
 
 ## Phases
 

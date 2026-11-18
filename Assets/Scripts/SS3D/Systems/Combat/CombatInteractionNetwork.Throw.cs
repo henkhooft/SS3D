@@ -424,7 +424,9 @@ namespace SS3D.Systems.Combat
             }
 
             Vector3 origin = ClearReleasePoint(feet, ThrowRules.ReleasePoint(feet, heading, hand.Side == HandSide.Left));
+            float thrownWeight = ThrowRules.ThrownWeight(item);
             hand.PlaceHeldItemOutOfHand(origin, ItemPlacement.WorldRotation(item, ItemPlacement.YawOf(heading)));
+            ServerPushFloatingThrower(heading, thrownWeight);
 
             if (item.TryGetComponent(out Rigidbody body))
             {
@@ -439,6 +441,30 @@ namespace SS3D.Systems.Combat
             foreach (IThrowReleaseHandler handler in item.GetComponents<IThrowReleaseHandler>())
             {
                 handler.ServerOnThrown();
+            }
+        }
+
+        /// <summary>
+        /// Throwing while floating pushes the thrower the other way, harder for heavier items (M13 R6, Decision 20). The
+        /// server resolves the push at release and sends it to the owner, who moves the body (living movement is owner-side).
+        /// </summary>
+        [Server]
+        private void ServerPushFloatingThrower(Vector3 heading, float thrownWeight)
+        {
+            if (!Owner.IsValid || !TryGetComponent(out HumanoidBodyStateMachine body) || !body.Snapshot.IsFloating)
+            {
+                return;
+            }
+
+            TargetThrowRecoil(Owner, ZeroGravityRules.ThrowRecoil(heading, thrownWeight));
+        }
+
+        [TargetRpc]
+        private void TargetThrowRecoil(NetworkConnection conn, Vector3 deltaV)
+        {
+            if (this != null && TryGetComponent(out HumanoidLivingController controller))
+            {
+                controller.AddCoastImpulse(deltaV);
             }
         }
 
