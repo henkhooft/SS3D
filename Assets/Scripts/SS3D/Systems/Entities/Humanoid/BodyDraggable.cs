@@ -8,6 +8,7 @@ using SS3D.Logging;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Health;
+using SS3D.Systems.Inventory.Containers;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Humanoid
@@ -58,7 +59,12 @@ namespace SS3D.Systems.Entities.Humanoid
         private bool _hasTether;
         private Vector3 _tether;
 
+        [SyncVar]
+        private HandSide _draggerHand;
+
         public bool Dragged => _draggerObject != null;
+
+        public HandSide DraggerHand => _draggerHand;
 
         public NetworkObject DraggerObject => _draggerObject;
 
@@ -143,7 +149,7 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         [Server]
-        public void ServerSetDrag(bool drag, Transform dragger)
+        public void ServerSetDrag(bool drag, Transform dragger, HandSide hand = HandSide.Right)
         {
             if (!drag)
             {
@@ -161,6 +167,7 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             _dragger = dragger;
+            _draggerHand = hand;
             _draggerObject = dragger.GetComponent<NetworkObject>();
             _breakOverSeconds = 0f;
             _lastSentAt = float.NegativeInfinity;

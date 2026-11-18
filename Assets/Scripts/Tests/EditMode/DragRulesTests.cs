@@ -2,6 +2,7 @@ using NUnit.Framework;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Furniture;
+using SS3D.Systems.Inventory.Containers;
 using UnityEngine;
 
 namespace EditorTests
@@ -315,6 +316,19 @@ namespace EditorTests
         public void Offer_SomeoneElsesDragOffersNothing()
         {
             Assert.AreEqual(DragOffer.None, DragRules.Offer(dragged: true, draggedBySource: false, targetDraggable: true));
+        }
+
+        [Test]
+        public void HandReserve_OnlyTheDraggingHand()
+        {
+            Assert.IsTrue(DragRules.IsHandReservedByDrag(dragging: true, dragHand: HandSide.Left, hand: HandSide.Left));
+            Assert.IsFalse(DragRules.IsHandReservedByDrag(dragging: true, dragHand: HandSide.Left, hand: HandSide.Right));
+        }
+
+        [Test]
+        public void HandReserve_NothingWithoutADrag()
+        {
+            Assert.IsFalse(DragRules.IsHandReservedByDrag(dragging: false, dragHand: HandSide.Left, hand: HandSide.Left));
         }
 
         private static DragEndInputs Healthy() => new()

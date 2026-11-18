@@ -13,6 +13,7 @@ using SS3D.Systems.Furniture;
 using SS3D.Systems.Inventory.Interactions;
 using SS3D.Systems.Selection;
 using UnityEngine;
+using SS3D.Systems.Inventory.Containers;
 
 /// <summary>
 /// Put this script on things that can be dragged by a player, such as unbolted furnitures.
@@ -30,6 +31,11 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
     private NetworkObject _draggerObject;
 
     public bool Dragged => _draggerObject != null;
+
+    [SyncVar]
+    private HandSide _draggerHand;
+
+    public HandSide DraggerHand => _draggerHand;
 
     public NetworkObject DraggerObject => _draggerObject;
 
@@ -54,8 +60,11 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
         return Vector3.Angle(dragger.forward, toTarget.normalized) <= 20f;
     }
 
-    public void ServerSetDrag(bool drag, Transform dragger)
+    public void ServerSetDrag(bool drag, Transform dragger, HandSide hand = HandSide.Right)
     {
+        if (drag && !Dragged)
+            _draggerHand = hand;
+
         if (drag && !Dragged && IsLocked)
             return;
 

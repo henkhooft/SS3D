@@ -30,6 +30,7 @@ using SS3D.UI.StoragePanel;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
+using SS3D.Systems.Entities.Dragging;
 
 namespace SS3D.UI.MainHud
 {
@@ -803,6 +804,7 @@ namespace SS3D.UI.MainHud
                 ?? _localPlayer.GetComponentInChildren<StaminaController>();
             _inventory = _localPlayer.GetComponentInChildren<HumanInventory>();
             _hands = _localPlayer.GetComponentInChildren<Hands>();
+            DragRegistry.Changed += RefreshHandReservedState;
             _intentProvider = _localPlayer.GetComponent<IIntentProvider>()
                 ?? _localPlayer.GetComponentInChildren<IIntentProvider>();
 
@@ -897,6 +899,7 @@ namespace SS3D.UI.MainHud
             _evaGear = null;
             _stamina = null;
             _inventory = null;
+            DragRegistry.Changed -= RefreshHandReservedState;
             _hands = null;
             _intentProvider = null;
             _cachedIntent = null;
@@ -1077,6 +1080,13 @@ namespace SS3D.UI.MainHud
             Hand hand = _hands.PlayerHands[index];
             if (hand?.Container == null)
             {
+                return;
+            }
+
+            // Clicking the reserved badge of the hand holding a drag lets go (M13 Decision 10).
+            if (DragHands.IsDraggingHand(hand))
+            {
+                _localPlayer.GetComponent<HumanoidLivingController>()?.CmdReleaseDrag();
                 return;
             }
 
@@ -1519,7 +1529,7 @@ namespace SS3D.UI.MainHud
                         continue;
                     }
 
-                    bool reserved = TwoHandedWeaponRules.IsHandReserved(hand, _hands);
+                    bool reserved = TwoHandedWeaponRules.IsHandReserved(hand, _hands) || DragHands.IsDraggingHand(hand);
                     if (hand.Side == HandSide.Left)
                     {
                         leftReserved = reserved;

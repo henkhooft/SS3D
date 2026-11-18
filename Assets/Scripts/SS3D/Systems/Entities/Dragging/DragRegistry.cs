@@ -11,6 +11,9 @@ namespace SS3D.Systems.Entities.Dragging
     {
         private static readonly Dictionary<object, object> TargetByDragger = new();
 
+        /// <summary>Any drag started or ended on this peer (the HUD's reserved badge listens).</summary>
+        public static event System.Action Changed;
+
         /// <summary>A target's dragger changed from <paramref name="previous"/> to <paramref name="next"/> (either may be null).</summary>
         public static void OnDraggerChanged(object target, object previous, object next)
         {
@@ -23,6 +26,8 @@ namespace SS3D.Systems.Entities.Dragging
             {
                 TargetByDragger[next] = target;
             }
+
+            Changed?.Invoke();
         }
 
         public static bool TryGetTarget(object dragger, out object target)
@@ -47,6 +52,7 @@ namespace SS3D.Systems.Entities.Dragging
             if (found != null)
             {
                 TargetByDragger.Remove(found);
+                Changed?.Invoke();
             }
         }
 

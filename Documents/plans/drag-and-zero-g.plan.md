@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: hand-reserve
     content: "blind: dragging hand refuses CanContainItem and shows the reserved badge (TwoHandedWeaponRules pattern); Drop on the dragging hand releases in either intent (bypass the Help-only gate for this case only); clicking the badge releases"
-    status: pending
+    status: completed
   - id: furniture-sweep
     content: "blind: Draggable furniture follows the rope instead of a fixed world offset; each server step sweeps its collider (SweepTest/BoxCast) against static geometry and closed door solids and stops at the hit"
     status: pending
@@ -154,6 +154,10 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 61 | Starting any drag, furniture included, needs an empty selected hand; furniture keeps its 20° cone around its pivot | SS3D + taste | Decision 10 |
 | 62 | Letting go of your own drag from the menu needs no range, cone or empty hand | taste | — |
 | 63 | The walk cap is `IsRunning` false while dragging, so the run toggle survives; in Harm the combat walk factor still applies | SS3D | `HumanoidLivingController.IsRunning` |
+| 64 | The dragging hand stays selectable, unlike a two-handed rifle's off-hand: it only refuses items, so Drop on it can let go | SS3D | `Hands.CanSelectHand` |
+| 65 | The rope's hand is the hand that started the drag, replicated on the target (`IDragTarget.DraggerHand`) | SS3D | — |
+| 66 | Drop (Q) on the dragging hand and a click on its badge both send one owner ServerRpc, `HumanoidLivingController.CmdReleaseDrag` | SS3D | networking §2: the server resolves the caller's own drag |
+| 67 | The HUD refreshes the badge on `DragRegistry.Changed`, since starting a drag changes no hand contents | SS3D | `MainHudSubSystem.RefreshHandReservedState` |
 
 ## Phases
 

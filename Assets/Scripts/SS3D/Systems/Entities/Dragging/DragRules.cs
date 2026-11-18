@@ -1,4 +1,5 @@
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Inventory.Containers;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Dragging
@@ -162,6 +163,10 @@ namespace SS3D.Systems.Entities.Dragging
 
             return targetDraggable ? DragOffer.Start : DragOffer.None;
         }
+
+        /// <summary>The hand that holds the rope is busy until you let go (Decision 10).</summary>
+        public static bool IsHandReservedByDrag(bool dragging, HandSide dragHand, HandSide hand) =>
+            dragging && dragHand == hand;
 
         /// <summary>The first end rule that applies, in a fixed order, or <see cref="DragEndReason.None"/> (Decision 13).</summary>
         public static DragEndReason EvaluateEnd(in DragEndInputs inputs)

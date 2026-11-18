@@ -13,6 +13,7 @@ using FishNet.Object;
 using SS3D.Logging;
 using SS3D.Systems.Tile;
 using UnityEditor;
+using SS3D.Systems.Entities.Dragging;
 
 namespace SS3D.Systems.Inventory.Containers
 {
@@ -859,7 +860,8 @@ namespace SS3D.Systems.Inventory.Containers
                 hands = GetComponentInParent<Hands>();
             }
 
-            return TwoHandedWeaponRules.CanPlaceInHand(item, hand, hands);
+            // The hand holding a drag's rope stays empty until it lets go (M13 Decision 10).
+            return TwoHandedWeaponRules.CanPlaceInHand(item, hand, hands) && !DragHands.IsDraggingHand(hand);
         }
 
         /// <summary>

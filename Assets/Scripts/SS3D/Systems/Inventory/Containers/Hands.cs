@@ -17,6 +17,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using InputSubSystem = SS3D.Systems.Inputs.InputSubSystem;
+using SS3D.Systems.Entities.Dragging;
+using SS3D.Systems.Entities.Humanoid;
 
 namespace SS3D.Systems.Inventory.Containers
 {
@@ -231,6 +233,13 @@ namespace SS3D.Systems.Inventory.Containers
         [Client]
         private void HandleDropHeldItem(InputAction.CallbackContext context)
         {
+            // Drop on the hand holding a drag lets go, in either intent: the Help-only gate below is for items (M13).
+            if (IsOwner && enabled && DragHands.IsDraggingHand(SelectedHand))
+            {
+                GetComponentInParent<HumanoidLivingController>()?.CmdReleaseDrag();
+                return;
+            }
+
             // Nothing to drop: the server would ignore it, but the put-down would already be playing here.
             if (!IsOwner || !enabled || SelectedHand == null || SelectedHand.IsEmpty())
                 return;

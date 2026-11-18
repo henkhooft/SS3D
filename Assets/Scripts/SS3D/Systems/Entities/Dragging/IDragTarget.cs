@@ -1,4 +1,5 @@
 using FishNet.Object;
+using SS3D.Systems.Inventory.Containers;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Dragging
@@ -15,6 +16,9 @@ namespace SS3D.Systems.Entities.Dragging
         /// <summary>Replicated: the dragging body's <see cref="NetworkObject"/>, or null.</summary>
         NetworkObject DraggerObject { get; }
 
+        /// <summary>Replicated: the dragger's hand that holds the rope.</summary>
+        HandSide DraggerHand { get; }
+
         GameObject GetGameObject();
 
         /// <summary>Whether <paramref name="dragger"/> may start dragging this now. Shared by the menu and the server.</summary>
@@ -24,6 +28,6 @@ namespace SS3D.Systems.Entities.Dragging
         bool IsInStartCone(Transform dragger);
 
         /// <summary>Server: start dragging with <paramref name="dragger"/>, or let go with false.</summary>
-        void ServerSetDrag(bool drag, Transform dragger);
+        void ServerSetDrag(bool drag, Transform dragger, HandSide hand = HandSide.Right);
     }
 }

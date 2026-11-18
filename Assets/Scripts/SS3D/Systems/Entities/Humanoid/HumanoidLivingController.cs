@@ -36,6 +36,13 @@ namespace SS3D.Systems.Entities.Humanoid
         /// <summary>What this body drags, or null.</summary>
         public IDragTarget DragTarget => DragRegistry.TryGetTarget(NetworkObject, out object target) ? target as IDragTarget : null;
 
+        /// <summary>Let go of whatever this body drags: Drop on the dragging hand, or a click on its badge (Decision 10).</summary>
+        [FishNet.Object.ServerRpc]
+        public void CmdReleaseDrag()
+        {
+            DragTarget?.ServerSetDrag(false, transform);
+        }
+
         /// <summary>Exhausted bodies move slower; feet slow by the same factor (ExertionPenalty is a SyncVar, so remotes match).</summary>
         public override float LocomotionPlaybackRate => GearSpeedFactor * (_staminaController != null
             ? SprintExertion.MovementSpeedFactor(_staminaController.ExertionPenalty)

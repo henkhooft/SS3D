@@ -77,7 +77,8 @@ namespace SS3D.Systems.Entities.Dragging
             Transform dragger = interactionEvent.Source.GetComponentInParent<Entity>().transform;
             // The controller reads the drag from the target's replicated dragger (DragRegistry), so a remote client's
             // drag starts when the SyncVar arrives and ends when the target goes away.
-            target.ServerSetDrag(!target.Dragged, dragger);
+            HandSide hand = interactionEvent.Source is Hand source ? source.Side : HandSide.Right;
+            target.ServerSetDrag(!target.Dragged, dragger, hand);
             return false;
         }
     }
