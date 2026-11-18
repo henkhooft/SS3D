@@ -28,13 +28,13 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | N7 | Corpsman medical kit | expected | missing | partial (hypospray in SS3D-Art) | `nukeops.yml` `SyndicateOperativeMedicFull` | Needs N6 |
 | N8 | Take the disk, load it into the nuke | must | done | in game | `P/Entities/Structures/Machines/nuke.yml` `diskSlot` | |
 | N9 | Arm the nuke, countdown, station-wide announcement | must | done | in game | `nuke.yml` `alertLevelOnActivate: DeltaNuke` | SS3D: 3 min; SS14: 300 s |
-| N10 | Enter the nuke code; anchor the nuke | must (SS14) | missing | — | `L/nuke/nuke-component.ftl` | ⚑ `antagonist-content.md` §6 deliberately has no code and treats the device as a plain timed charge. Recommend keeping SS3D's rule |
+| N10 | Enter the nuke code; anchor the nuke | dropped | missing | — | `L/nuke/nuke-component.ftl` | Owner decided 2026-11-18: keep SS3D's rule from `antagonist-content.md` §6, a plain timed charge with no code or anchoring (Decision 5) |
 | N11 | Detonation ends the round with a result screen | must | done | — | `preset-nukeops.ftl` | M4/M5 |
-| N12 | Uplink with telecrystals: open, browse, buy | must | missing | SS3D-Art `syndicatetelecrystal` | `P/Entities/Objects/Specific/syndicate.yml` `BaseUplinkRadio40TC`; `P/Catalog/UplinkCatalog/` | ⚑ design: later pass; MVP1: "no uplink". The single biggest identity gap for a Nuke Ops player |
-| N13 | Declare war (+40 TC, crew warned, departure delayed) | expected | missing | none | `P/Entities/Objects/Devices/Syndicate_Gadgets/war_declarator.yml` | Needs N12, and a travel phase (N15) to delay |
-| N14 | Uplink stock: firearms, ammo, explosives, melee, wearables, medicine | expected | partial | SS3D-Art `bulldogshotgun`, `l6`, `energyswords`, `fraggrenades`, `riotshield`; in game: C20R, C4, minibomb, Syndicate bomb | `P/Catalog/UplinkCatalog/*.yml` | Most iconic SS14 items have SS3D-Art models. Comes with N12 |
-| N15 | Start off-station and travel in (shuttle) | must (SS14) | missing | — | `computers.yml` `ComputerShuttleSyndie` | ⚑ design later pass; shuttles are MVP2. A spawn pad stands in |
-| N16 | Jetpack through vacuum | expected | missing | in index: `jetpack` | `P/Catalog/UplinkCatalog/wearables.yml` `UplinkJetpack` | Pairs with N15 and with zero-g movement (U31) |
+| N12 | Uplink with telecrystals: open, browse, buy | must, after Playtest 1 | missing | SS3D-Art `syndicatetelecrystal` | `P/Entities/Objects/Specific/syndicate.yml` `BaseUplinkRadio40TC`; `P/Catalog/UplinkCatalog/` | Owner decided 2026-11-18 (Decision 4): a standalone uplink item that opens a machine-interface panel. This deviates from `antagonist-content.md` §4, which puts it in a PDA tab, until the PDA exists. Content brief: [uplink UI design prompt](../plans/uplink-ui-design-prompt.md) |
+| N13 | Declare war (+40 TC, crew warned, departure delayed) | later | missing | none | `P/Entities/Objects/Devices/Syndicate_Gadgets/war_declarator.yml` | Owner decided 2026-11-18: later, with the shuttle (Decision 6) |
+| N14 | Uplink stock: firearms, ammo, explosives, melee, wearables, medicine | must, after Playtest 1 | partial | SS3D-Art `bulldogshotgun`, `l6`, `energyswords`, `fraggrenades`, `riotshield`; in game: C20R, C4, minibomb, Syndicate bomb | `P/Catalog/UplinkCatalog/*.yml` | Most iconic SS14 items have SS3D-Art models. Comes with N12 |
+| N15 | Start off-station and travel in (shuttle) | later | missing | — | `computers.yml` `ComputerShuttleSyndie` | Owner decided 2026-11-18: later; shuttles are MVP2 and a spawn pad stands in (Decision 6) |
+| N16 | Jetpack through vacuum | later | missing | none (only a game-icons SVG, no 3D model) | `P/Catalog/UplinkCatalog/wearables.yml` `UplinkJetpack` | Owner: now if art exists. It doesn't, so it waits for a model. Zero-g movement (U31) covers moving without one (Decision 6) |
 | N17 | Toggle hardsuit helmet | expected | missing | in game | `P/Actions/types.yml` `ActionToggleSuitPiece` | SS3D seals hardsuit + helmet as separate items |
 | N18 | Syndicate bomb: place, set timer, defuse | later | done | in game | `P/Entities/Structures/Machines/bombs.yml` `SyndicateBomb` | Ahead of SS14's tier |
 
@@ -48,7 +48,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | C4 | Captain: station announcement from a console | expected | missing | SS3D-Art `consolecmd`, `requestconsole` | `computers.yml` `ComputerComms` | Only server-side station cues exist |
 | C5 | Security: fire and reload | must | done | in game | `P/Entities/Objects/Weapons/Guns/Pistols/pistols.yml` | |
 | C6 | Security: spare magazine in kit | expected | missing | none | `P/Roles/Jobs/Security/security_officer.yml` | Same blocker as N2 |
-| C7 | Security: handcuff someone | expected, after Playtest 1 | missing | SS3D-Art `handcuffs`, `cablerestraints` | `P/Entities/Objects/Misc/handcuffs.yml` | ⚑ MVP1 defers handcuffs to MVP2, but `antagonist-content.md` §6 gives crew the win when every operative is "dead or restrained". Owner decided 2026-11-18: after Playtest 1, with U9 (Decision 3) |
+| C7 | Security: handcuff someone | expected, after Playtest 1 | missing | SS3D-Art `handcuffs`, `cablerestraints` | `P/Entities/Objects/Misc/handcuffs.yml` | MVP1 defers handcuffs to MVP2, but `antagonist-content.md` §6 gives crew the win when every operative is "dead or restrained". Owner decided 2026-11-18: after Playtest 1, with U9 (Decision 3) |
 | C8 | Security: stun baton knockdown | expected | partial | in game | `P/Entities/Objects/Weapons/security.yml` `Stunbaton` | Awaits the owner's hand test (M1c) |
 | C9 | Security: flash | expected | missing | SS3D-Art `flash` | `security.yml` `Flash` | |
 | C10 | Security: armory with lethal guns | expected | missing | in game (M4), SS3D-Art shotguns | `P/Catalog/Fills/Lockers/security.yml` | M1c open: the M4 in an armory |
@@ -89,7 +89,7 @@ This is the backlog the milestones draw from. A gate doc says *when* something h
 | U19 | Equip and unequip clothing slots | expected | done | — | `Controls.xml` | |
 | U20 | Open backpack and belt | expected | done | — | `Controls.xml` | |
 | U21 | Crawl when downed | expected | done | — | `species_base.yml` `Crawler` | M1s |
-| U22 | Lie down or rest by choice | expected | missing | — | not found in SS14 prototypes | ⚑ 3D pose decision. Playing dead is classic SS13 |
+| U22 | Lie down or rest by choice | expected | missing | — | not found in SS14 prototypes | Owner decided 2026-11-18: `expected`, reusing the Downed crawl pose (Decision 7). Playing dead is classic SS13 |
 | U23 | Buckle to a chair or bed | expected | partial | in game: chairs, beds; SS3D-Art `shuttleseat`, `stools` | `species_base.yml` `Buckle` | `SitInteraction` exists, but no prefab has a `SeatAnchor` |
 | U24 | Bleed, go critical, die | expected | done | — | `P/Entities/Mobs/base.yml` `Bloodstream`, `MobThresholds` | |
 | U25 | Catch fire; stop, drop and roll | expected | unverified | — | `base.yml` `Flammable` | The flamethrower and napalm exist; burning bodies not checked |
@@ -106,15 +106,15 @@ Held back, so agents don't start them without the owner: door remote, Captain's 
 
 ## Decisions for the owner
 
-Each is a conflict between SS14 and a recorded SS3D decision. Agents don't settle these.
+Each was a conflict between SS14 and a recorded SS3D decision. All seven were decided by the owner on 2026-11-18. New conflicts go here as open items; agents don't settle them.
 
 1. ~~**Dragging bodies (U7).**~~ **Decided 2026-11-18: `must`, together with moving in zero-g (U31).** Pulling is core in SS14. Without it, the Doctor can't bring a downed crew member to safety and nobody can carry off a disk holder. The owner added zero-g movement: today, anyone who loses their footing without magboots ragdolls with no way to move. Still open: does it land before Playtest 1? That would pull it out of MVP1's feel-pass deferral.
 2. ~~**Pinpointer (N3, C2).**~~ **Decided 2026-11-18: `must`; a HUD compass shown while the pinpointer is in hand.** That's the easiest form for now; an arrow on the held model can come later. `antagonist-content.md` §6 already lists the pinpointer in the first pass, so the code is behind the design. The Captain's pinpointer (C2) is the same item.
 3. ~~**Handcuffs (C7).**~~ **Decided 2026-11-18: `expected`, after Playtest 1, together with U9 (put an item on another body).** Until then, crew win only by killing the operatives, even though the §6 rule says "dead or restrained".
-4. **Uplink (N12–N14).** SS14 `must`; the design calls it a later pass and MVP1 says no uplink. Recommend `must` for the gate after Playtest 1. It's the biggest operative-identity gap, and most of the stock already has SS3D-Art models. It needs a decision on where the uplink lives before the PDA exists (SS14 uses a radio).
-5. **Nuke code and anchoring (N10).** SS14 `must`; SS3D's design deliberately treats the device as a plain timed charge. Recommend keeping SS3D's rule and dropping the row.
-6. **Travel phase (N15, N13, N16).** SS14 `must`; needs shuttles (MVP2). Recommend `later` until shuttles exist. War declaration and the jetpack wait with it.
-7. **Rest by choice (U22).** Recommend `expected`, with the pose reusing the Downed crawl body.
+4. ~~**Uplink (N12–N14).**~~ **Decided 2026-11-18: `must` for the gate after Playtest 1.** A standalone uplink item opens a machine-interface panel. This deviates from `antagonist-content.md` §4 (a PDA tab) until the PDA exists; the logged ledger and items that appear directly still apply. Content brief for Claude Design: [uplink-ui-design-prompt](../plans/uplink-ui-design-prompt.md).
+5. ~~**Nuke code and anchoring (N10).**~~ **Decided 2026-11-18: dropped for now.** SS3D's plain timed charge stays.
+6. ~~**Travel phase (N15, N13, N16).**~~ **Decided 2026-11-18: shuttle and war declaration later.** The owner wanted the jetpack now if art exists. SS3D-Art has only an icon, no model, so it waits too.
+7. ~~**Rest by choice (U22).**~~ **Decided 2026-11-18: `expected`**, reusing the Downed crawl pose.
 
 ## Ready next
 
@@ -125,15 +125,16 @@ Each is a conflict between SS14 and a recorded SS3D decision. Agents don't settl
 3. **C16** health analyzer scan: the item already ships in the Doctor's belt.
 4. **U14 + N4** radio gating plus an operative team channel.
 5. **U15** player emote trigger.
-6. **U23** seats: put `SeatAnchor` on the chairs that are already in game.
-7. **C9** flash (SS3D-Art model).
-8. **C20** emergency medipen.
-9. **U27** alert state on arm.
-10. **N17** hardsuit helmet toggle.
-11. **N6 + N7** operative roles and the Corpsman kit.
-12. **C4** Captain's announcement console.
+6. **U22** rest by choice, reusing the Downed crawl pose.
+7. **U23** seats: put `SeatAnchor` on the chairs that are already in game.
+8. **C9** flash (SS3D-Art model).
+9. **C20** emergency medipen.
+10. **U27** alert state on arm.
+11. **N17** hardsuit helmet toggle.
+12. **N6 + N7** operative roles and the Corpsman kit.
+13. **C4** Captain's announcement console.
 
-After Playtest 1, not before: C7 + U9 (handcuffs and putting items on another body).
+After Playtest 1, not before: C7 + U9 (handcuffs and putting items on another body); N12 + N14 (the uplink and its stock).
 
 Already in flight elsewhere, don't duplicate: N2/C6 and C10 (M1c), U11 (M12), C8 (hand test).
 
