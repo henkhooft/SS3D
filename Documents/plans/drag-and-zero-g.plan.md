@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: drag-interaction
     content: "blind: body-drag interaction filtered out (not greyed) on standing and knockdown bodies, 60° cone to the hips bone; no sprint while dragging, walk cap"
-    status: pending
+    status: completed
   - id: hand-reserve
     content: "blind: dragging hand refuses CanContainItem and shows the reserved badge (TwoHandedWeaponRules pattern); Drop on the dragging hand releases in either intent (bypass the Help-only gate for this case only); clicking the badge releases"
     status: pending
@@ -150,6 +150,10 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 57 | A body's position for the rope, the start range and the break rule is its hips while ragdolled, its root otherwise | SS3D | the ragdolled root lags the bones |
 | 58 | Only a standing (Locomotion) body may start a drag | SS3D | end rule "dragger down" |
 | 59 | `IsBeingDragged` takes bit 31, the last free bit of the packed body snapshot | SS3D | `BodyAnimationSnapshot.Pack` |
+| 60 | `DragInteraction` moved to `Systems/Entities/Dragging` with the rest of the contract, so `BodyDraggable` builds it without a Furniture dependency | SS3D | G4 |
+| 61 | Starting any drag, furniture included, needs an empty selected hand; furniture keeps its 20° cone around its pivot | SS3D + taste | Decision 10 |
+| 62 | Letting go of your own drag from the menu needs no range, cone or empty hand | taste | — |
+| 63 | The walk cap is `IsRunning` false while dragging, so the run toggle survives; in Harm the combat walk factor still applies | SS3D | `HumanoidLivingController.IsRunning` |
 
 ## Phases
 

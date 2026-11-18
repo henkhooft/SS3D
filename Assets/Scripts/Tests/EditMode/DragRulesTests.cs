@@ -293,6 +293,30 @@ namespace EditorTests
             Assert.IsFalse(DragRegistry.TryGetTarget(dragger, out _));
         }
 
+        [Test]
+        public void Offer_StandingOrKnockedDownBodiesOfferNothing_NotAGreyedEntry()
+        {
+            Assert.AreEqual(DragOffer.None, DragRules.Offer(dragged: false, draggedBySource: false, targetDraggable: false));
+        }
+
+        [Test]
+        public void Offer_ADraggableBodyOffersDrag()
+        {
+            Assert.AreEqual(DragOffer.Start, DragRules.Offer(dragged: false, draggedBySource: false, targetDraggable: true));
+        }
+
+        [Test]
+        public void Offer_YourOwnDragOffersLettingGo_EvenOnceTheBodyStandsUp()
+        {
+            Assert.AreEqual(DragOffer.Release, DragRules.Offer(dragged: true, draggedBySource: true, targetDraggable: false));
+        }
+
+        [Test]
+        public void Offer_SomeoneElsesDragOffersNothing()
+        {
+            Assert.AreEqual(DragOffer.None, DragRules.Offer(dragged: true, draggedBySource: false, targetDraggable: true));
+        }
+
         private static DragEndInputs Healthy() => new()
         {
             DraggerCanAct = true,

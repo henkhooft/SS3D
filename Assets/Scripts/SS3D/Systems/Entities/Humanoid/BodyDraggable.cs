@@ -1,6 +1,9 @@
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using SS3D.Interactions;
+using SS3D.Interactions.Extensions;
+using SS3D.Interactions.Interfaces;
 using SS3D.Logging;
 using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Entities.Dragging;
@@ -17,8 +20,11 @@ namespace SS3D.Systems.Entities.Humanoid
     /// The server re-sends the tether instead of teleporting the body, so a client that ignores it drifts off and snags
     /// (owner question 1).
     /// </summary>
-    public sealed class BodyDraggable : NetworkBehaviour, IDragTarget
+    public sealed class BodyDraggable : NetworkBehaviour, IDragTarget, IInteractionTarget
     {
+        /// <summary>The menu entry, built once: outline probes ask on every hover (interactions-framework Pitfalls).</summary>
+        private IInteraction[] _dragInteractions;
+
         /// <summary>The server sends a moved tether at most this often.</summary>
         private const float SendInterval = 0.05f;
 
@@ -67,6 +73,25 @@ namespace SS3D.Systems.Entities.Humanoid
 
         /// <summary>The hips, for the start cone (Decision 26).</summary>
         public Transform Hips => Cache() && _hips != null ? _hips : transform;
+
+        public bool IsInStartCone(Transform dragger) =>
+            dragger != null && DragRules.IsInDragCone(dragger.position, dragger.forward, BodyPosition);
+
+        /// <summary>
+        /// Offers Drag on a Downed, Critical or dead body and Drop on your own drag; a standing or knocked-down body
+        /// offers nothing at all (Decision 26).
+        /// </summary>
+        public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
+        {
+            Entity source = interactionEvent.Source?.GetComponentInParent<Entity>();
+            bool draggedBySource = Dragged && source != null && _draggerObject == source.NetworkObject;
+            if (DragRules.Offer(Dragged, draggedBySource, IsDraggableNow) == DragOffer.None)
+            {
+                return System.Array.Empty<IInteraction>();
+            }
+
+            return _dragInteractions ??= new IInteraction[] { new DragInteraction() };
+        }
 
         public override void OnStartNetwork()
         {

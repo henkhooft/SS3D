@@ -20,6 +20,9 @@ namespace SS3D.Systems.Entities.Dragging
         /// <summary>Whether <paramref name="dragger"/> may start dragging this now. Shared by the menu and the server.</summary>
         bool CanBeDraggedBy(Transform dragger);
 
+        /// <summary>Whether this lies in the start cone in front of <paramref name="dragger"/> (Decision 26).</summary>
+        bool IsInStartCone(Transform dragger);
+
         /// <summary>Server: start dragging with <paramref name="dragger"/>, or let go with false.</summary>
         void ServerSetDrag(bool drag, Transform dragger);
     }

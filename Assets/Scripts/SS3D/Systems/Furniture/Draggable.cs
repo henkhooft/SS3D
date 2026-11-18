@@ -47,6 +47,13 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
     public bool CanBeDraggedBy(Transform dragger) =>
         MayChangeDrag(true, dragger, Dragged ? _dragger : null, transform.position) && (Dragged || !IsLocked);
 
+    /// <summary>Furniture keeps the narrow 20° cone it always had: its pivot is the thing in front of you.</summary>
+    public bool IsInStartCone(Transform dragger)
+    {
+        Vector3 toTarget = transform.position - dragger.position;
+        return Vector3.Angle(dragger.forward, toTarget.normalized) <= 20f;
+    }
+
     public void ServerSetDrag(bool drag, Transform dragger)
     {
         if (drag && !Dragged && IsLocked)

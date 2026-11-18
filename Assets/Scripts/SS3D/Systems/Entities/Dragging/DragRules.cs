@@ -15,6 +15,15 @@ namespace SS3D.Systems.Entities.Dragging
         Floating,
     }
 
+    /// <summary>What the drag entry on a target's menu does, if it's there at all.</summary>
+    public enum DragOffer
+    {
+        /// <summary>No entry: filtered out, not greyed (Decision 26).</summary>
+        None,
+        Start,
+        Release,
+    }
+
     /// <summary>What the server knows about a running drag each step, for <see cref="DragRules.EvaluateEnd"/>.</summary>
     public struct DragEndInputs
     {
@@ -138,6 +147,20 @@ namespace SS3D.Systems.Entities.Dragging
             }
 
             return Vector3.Angle(forward, toTarget) <= StartConeDegrees;
+        }
+
+        /// <summary>
+        /// Whether a target's menu shows the drag entry for this source: start on a draggable target nobody drags, let go
+        /// of your own drag (even once the body stands), and nothing otherwise, so a standing body shows no greyed entry.
+        /// </summary>
+        public static DragOffer Offer(bool dragged, bool draggedBySource, bool targetDraggable)
+        {
+            if (dragged)
+            {
+                return draggedBySource ? DragOffer.Release : DragOffer.None;
+            }
+
+            return targetDraggable ? DragOffer.Start : DragOffer.None;
         }
 
         /// <summary>The first end rule that applies, in a fixed order, or <see cref="DragEndReason.None"/> (Decision 13).</summary>
