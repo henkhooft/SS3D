@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: space-recovery
     content: "blind: Ragdoll — a wind/blast knockdown that expires over open space recovers into upright Floating (drop the floor gate at Ragdoll.cs ~l.209 for that case); while Floating, ServerApplyWind never knocks down"
-    status: pending
+    status: completed
   - id: coast-impulse
     content: "blind: HumanoidLivingController — AddCoastImpulse(Vector3) as the single writer into _coastVelocity, capped at run speed; Ragdoll.TickWind calls it instead of MoveUpright while Floating; WASD traction within reach (25% accel, walk cap) and 0.5 s braking on release, via an owner-side overlap on the tile-collider layer"
     status: pending
@@ -129,6 +129,9 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 36 | Traction never slows a coast faster than walk speed, but can steer it | taste | a thrown-off spacewalker keeps their throw speed |
 | 37 | Throw recoil is planar and opposite the throw's planar heading; a throw straight up or down gives none | adaptation | coast is planar (`TryProcessSpaceFloat`) |
 | 38 | End rules are checked in a fixed order: release, despawn, dragger down, snag, target stood, floating | SS3D | one reason logged per end |
+| 39 | A combat (untimed-by-wind) knockdown keeps its old recovery; only wind and blast knockdowns use the open-space rule, and only an Unknown map still holds them down | SS3D | `Ragdoll._windKnockdown` |
+| 40 | Blast knockdowns over open space are unchanged: R3 covers wind only | adaptation | `Ragdoll.ServerApplyBlast` |
+| 41 | `Ragdoll` was at its G3 class-size ratchet; its static floor probe moved to `HumanoidSpaceSupport.TryGetFloorBelow` instead of raising the entry | SS3D | `ClassSizeRatchetTests` |
 
 ## Phases
 

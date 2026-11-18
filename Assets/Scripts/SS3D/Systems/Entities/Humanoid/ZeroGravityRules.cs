@@ -1,7 +1,19 @@
+using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Entities.Humanoid.Body;
 using UnityEngine;
 
 namespace SS3D.Systems.Entities.Humanoid
 {
+    /// <summary>What a wind or blast knockdown does when its timer runs out.</summary>
+    public enum KnockdownRecovery
+    {
+        /// <summary>The server can't tell yet whether the body is over the deck.</summary>
+        Wait,
+        StandUp,
+        /// <summary>Over open space: get up into Floating instead of lying there for good (R2).</summary>
+        Float,
+    }
+
     /// <summary>
     /// Pure rules for moving in zero gravity (Documents/plans/drag-and-zero-g.plan.md R4–R6, Decisions 4–6). Coasting
     /// is planar, like the rest of space float: nothing here lifts a body off the deck plane. The numbers are owner
@@ -92,6 +104,21 @@ namespace SS3D.Systems.Entities.Humanoid
         /// </summary>
         public static bool CountsAsReach(bool isTileObject, bool isDraggable, bool isItem, bool isBody) =>
             isTileObject && !isDraggable && !isItem && !isBody;
+
+        /// <summary>
+        /// A wind or blast knockdown that runs out over open space recovers into Floating (R2, Decision 2); it used to
+        /// wait for floor support and so ragdolled forever. Only an unknown map still holds it down.
+        /// </summary>
+        public static KnockdownRecovery WindKnockdownRecovery(HumanoidSupportState support) => support switch
+        {
+            HumanoidSupportState.Supported => KnockdownRecovery.StandUp,
+            HumanoidSupportState.Unsupported => KnockdownRecovery.Float,
+            _ => KnockdownRecovery.Wait,
+        };
+
+        /// <summary>While Floating, wind pushes but never knocks down (R3, Decision 3).</summary>
+        public static bool WindKnocksDown(float windSpeed, bool knockedDown, bool floating) =>
+            !knockedDown && !floating && windSpeed >= AtmosWind.KnockdownSpeed;
 
         private static bool IsFinite(Vector3 v) =>
             !float.IsNaN(v.x) && !float.IsNaN(v.y) && !float.IsNaN(v.z)

@@ -1,5 +1,7 @@
 using NUnit.Framework;
+using SS3D.Systems.Atmospherics;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using UnityEngine;
 
 namespace EditorTests
@@ -157,6 +159,43 @@ namespace EditorTests
         public void Reach_LockersItemsAndBodiesDoNot(bool tile, bool draggable, bool item, bool body)
         {
             Assert.IsFalse(ZeroGravityRules.CountsAsReach(tile, draggable, item, body));
+        }
+
+        [Test]
+        public void KnockdownRecovery_OnTheDeckStandsUp()
+        {
+            Assert.AreEqual(KnockdownRecovery.StandUp, ZeroGravityRules.WindKnockdownRecovery(HumanoidSupportState.Supported));
+        }
+
+        [Test]
+        public void KnockdownRecovery_OverOpenSpaceFloatsInsteadOfStayingDownForever()
+        {
+            Assert.AreEqual(KnockdownRecovery.Float, ZeroGravityRules.WindKnockdownRecovery(HumanoidSupportState.Unsupported));
+        }
+
+        [Test]
+        public void KnockdownRecovery_WaitsWhileTheMapIsUnknown()
+        {
+            Assert.AreEqual(KnockdownRecovery.Wait, ZeroGravityRules.WindKnockdownRecovery(HumanoidSupportState.Unknown));
+        }
+
+        [Test]
+        public void Wind_StrongGustKnocksDownAStandingBody()
+        {
+            Assert.IsTrue(ZeroGravityRules.WindKnocksDown(AtmosWind.KnockdownSpeed, knockedDown: false, floating: false));
+        }
+
+        [Test]
+        public void Wind_NeverKnocksDownAFloatingBody()
+        {
+            Assert.IsFalse(ZeroGravityRules.WindKnocksDown(AtmosWind.MaxSpeed, knockedDown: false, floating: true));
+        }
+
+        [Test]
+        public void Wind_WeakGustOrAlreadyDownDoesNotKnockDown()
+        {
+            Assert.IsFalse(ZeroGravityRules.WindKnocksDown(AtmosWind.KnockdownSpeed - 0.1f, knockedDown: false, floating: false));
+            Assert.IsFalse(ZeroGravityRules.WindKnocksDown(AtmosWind.MaxSpeed, knockedDown: true, floating: false));
         }
     }
 }

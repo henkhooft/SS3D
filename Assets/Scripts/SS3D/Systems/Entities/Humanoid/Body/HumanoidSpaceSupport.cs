@@ -96,6 +96,28 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             return aboveDeck > StrandedHeightAboveDeck ? Mathf.Min(maxDrop, aboveDeck) : 0f;
         }
 
+        private static int _floorSupportMask = -1;
+
+        /// <summary>Everything a lying body can rest on: not bodies, items, UI or the station ceiling.</summary>
+        private static int FloorSupportMask
+        {
+            get
+            {
+                if (_floorSupportMask == -1)
+                {
+                    _floorSupportMask = ~LayerMask.GetMask(
+                        "Characters", "BodyParts", "Items", "UI", "TransparentFX", "Ignore Raycast", StationBounds.CeilingLayerName);
+                }
+
+                return _floorSupportMask;
+            }
+        }
+
+        /// <summary>A floor collider within 2 m below <paramref name="position"/> (moved here from <c>Ragdoll</c>).</summary>
+        public static bool TryGetFloorBelow(Vector3 position, out RaycastHit hit) =>
+            Physics.Raycast(position + Vector3.up * 0.05f, Vector3.down, out hit, 2f,
+                FloorSupportMask, QueryTriggerInteraction.Ignore);
+
         private static bool IsServerTileWorldReady(TileSubSystem tiles)
         {
             if (SubSystems.TryGet(out WorldReadinessSubSystem readiness)

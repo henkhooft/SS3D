@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using FishNet.Connection;
 using FishNet.Object;
 using SS3D.Systems.Atmospherics;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Health;
 using UnityEngine;
 
@@ -38,8 +39,10 @@ namespace SS3D.Systems.Entities.Humanoid
             if (wind.sqrMagnitude < AtmosWind.MinSpeed * AtmosWind.MinSpeed) return;
             // Boots hold an upright body; wind it already felt fades by itself (armor.md §3).
             if (TryGetComponent(out EvaGearController gear) && gear.ServerAnchored()) return;
-            // Do not convert an existing health-owned timeless collapse to a timed knockdown.
-            if (!IsKnockedDown && wind.magnitude >= AtmosWind.KnockdownSpeed)
+            // Do not convert an existing health-owned timeless collapse to a timed knockdown. A floating body is
+            // pushed along, never floored: there is no floor (M13 R3).
+            bool floating = TryGetComponent(out HumanoidBodyStateMachine body) && body.Snapshot.IsFloating;
+            if (ZeroGravityRules.WindKnocksDown(wind.magnitude, IsKnockedDown, floating))
             {
                 _windKnockdown = true;
                 ServerKnockdown(WindKnockdownSeconds);

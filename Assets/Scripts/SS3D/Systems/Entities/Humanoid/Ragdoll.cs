@@ -206,9 +206,10 @@ namespace SS3D.Systems.Entities.Humanoid
             if (IsServer && _isKnockdownTimed && IsKnockedDown && !_deathRagdoll)
             {
                 _knockdownTimer -= Time.deltaTime;
-                if (_knockdownTimer <= 0 && (!_windKnockdown || HasFloorSupport()))
+                if (_knockdownTimer <= 0 && MayRecoverFromKnockdown())
                 {
-                    // Server-side recovery: ServerRecover is the only way up.
+                    // Server-side recovery: ServerRecover is the only way up. Over open space the living controller
+                    // then finds no plenum and floats, instead of the body ragdolling forever (M13 R2).
                     ServerRecover();
                 }
             }
@@ -544,22 +545,6 @@ namespace SS3D.Systems.Entities.Humanoid
             UpdateRagdollGravity();
             AlignToHips();
         }
-        private static int _floorSupportMask = -1;
-
-        private static int FloorSupportMask
-        {
-            get
-            {
-                if (_floorSupportMask == -1)
-                {
-                    _floorSupportMask = ~LayerMask.GetMask(
-                        "Characters", "BodyParts", "Items", "UI", "TransparentFX", "Ignore Raycast", StationBounds.CeilingLayerName);
-                }
-
-                return _floorSupportMask;
-            }
-        }
-
         private bool HasFloorSupport()
         {
             Vector3 position = _hips != null ? _hips.position : transform.position;
@@ -576,12 +561,12 @@ namespace SS3D.Systems.Entities.Humanoid
                 return false;
             }
 
-            return TryGetFloorBelow(position, out _);
+            return HumanoidSpaceSupport.TryGetFloorBelow(position, out _);
         }
 
-        private static bool TryGetFloorBelow(Vector3 position, out RaycastHit hit) =>
-            Physics.Raycast(position + Vector3.up * 0.05f, Vector3.down, out hit, 2f,
-                FloorSupportMask, QueryTriggerInteraction.Ignore);
+        /// <summary>A wind/blast knockdown stands up on the deck or floats up over open space (<see cref="ZeroGravityRules.WindKnockdownRecovery"/>).</summary>
+        private bool MayRecoverFromKnockdown() => !_windKnockdown || ZeroGravityRules.WindKnockdownRecovery(
+            HumanoidSpaceSupport.GetSupportAt(_hips != null ? _hips.position : transform.position)) != KnockdownRecovery.Wait;
 
         private void UpdateRagdollGravity()
         {
@@ -620,7 +605,7 @@ namespace SS3D.Systems.Entities.Humanoid
             Vector3 previousRootPosition = _character.position;
             if (HasFloorSupport())
             {
-                if (TryGetFloorBelow(_hips.position, out RaycastHit hitInfo))
+                if (HumanoidSpaceSupport.TryGetFloorBelow(_hips.position, out RaycastHit hitInfo))
                 {
                     newPosition.y = hitInfo.point.y + AlignmentYDelta;
                 }
