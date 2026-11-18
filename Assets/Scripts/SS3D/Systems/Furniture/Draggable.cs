@@ -9,6 +9,8 @@ using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Entities;
 using SS3D.Systems.Entities.Dragging;
+using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Humanoid.Body;
 using SS3D.Systems.Furniture;
 using SS3D.Systems.Inventory.Interactions;
 using SS3D.Systems.Selection;
@@ -23,8 +25,6 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
 {
     [SerializeField]
     private Transform _dragger;
-
-    private Vector3 _draggerToDragged;
 
     /// <summary>The dragging body. Replicated so every peer's <see cref="DragRegistry"/> knows who drags what.</summary>
     [SyncVar(OnChange = nameof(OnDraggerObjectChanged))]
@@ -98,20 +98,113 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
         AddHandle(UpdateEvent.AddListener(HandleUpdate));
     }
 
+    /// <summary>Rope length, set when the drag starts (<see cref="DragRules.RestDistance"/>).</summary>
+    private float _restDistance;
+    private float _breakOverSeconds;
+
+    private static readonly RaycastHit[] SweepHits = new RaycastHit[16];
+    private static int _sweepMask = -1;
+
+    /// <summary>
+    /// The object trails on the rope (Decision 12) and never passes through walls, windows or closed door leaves: each
+    /// step sweeps its colliders' box along the move and stops at the first hit (furniture map Pitfalls). The server runs
+    /// the end rules here too (Decision 13).
+    /// </summary>
     private void HandleUpdate(ref EventContext context, in UpdateEvent e)
     {
         if (!IsServer || !Dragged)
             return;
 
-        if (_dragger == null)
+        DragEndReason reason = EvaluateEnd(Time.deltaTime);
+        if (reason != DragEndReason.None)
         {
-            // The dragger despawned.
             ApplyDrag(false, null);
             return;
         }
 
-        transform.position =
-            new Vector3(_dragger.position.x, transform.position.y, _dragger.position.z) + _draggerToDragged;
+        Vector3 tether = DragRules.TetherPoint(_dragger.position, transform.position, _restDistance);
+        Vector3 delta = tether - transform.position;
+        delta.y = 0f;
+        if (delta.sqrMagnitude < 0.000001f)
+            return;
+
+        transform.position += DragRules.SweptStep(delta, TrySweep(delta, out float hitDistance), hitDistance);
+    }
+
+    private DragEndReason EvaluateEnd(float seconds)
+    {
+        bool draggerGone = _dragger == null;
+        Vector3 apart = draggerGone ? Vector3.zero : _dragger.position - transform.position;
+        apart.y = 0f;
+        return DragRules.EvaluateEnd(new DragEndInputs
+        {
+            DraggerGone = draggerGone,
+            DraggerCanAct = draggerGone || !_dragger.TryGetComponent(out Ragdoll body)
+                || body.Presentation == BodyPresentationState.Locomotion,
+            Snagged = DragRules.TickBreak(ref _breakOverSeconds, apart.magnitude, seconds),
+            TargetStillDraggable = true,
+            DraggerFloating = !draggerGone && HumanoidSpaceSupport.IsUnsupportedAt(_dragger.position),
+            TargetFloating = HumanoidSpaceSupport.IsUnsupportedAt(transform.position),
+        });
+    }
+
+    /// <summary>
+    /// Casts the box around this object's solid colliders along <paramref name="delta"/>, lifted and trimmed off the
+    /// floor it stands on. Bodies and items (other layers) and this object's own colliders don't stop it.
+    /// </summary>
+    private bool TrySweep(Vector3 delta, out float hitDistance)
+    {
+        hitDistance = 0f;
+        if (!TryGetSolidBounds(out Bounds bounds))
+            return false;
+
+        if (_sweepMask == -1)
+            _sweepMask = LayerMask.GetMask("Default", "Walls");
+
+        const float floorClearance = 0.06f;
+        Vector3 extents = bounds.extents;
+        extents.y = Mathf.Max(0.01f, extents.y - floorClearance);
+        Vector3 centre = bounds.center + Vector3.up * floorClearance;
+        float distance = delta.magnitude;
+        int count = Physics.BoxCastNonAlloc(centre, extents, delta / distance, SweepHits, Quaternion.identity, distance,
+            _sweepMask, QueryTriggerInteraction.Ignore);
+
+        bool hit = false;
+        hitDistance = distance;
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit candidate = SweepHits[i];
+            if (candidate.collider == null || candidate.collider.transform.IsChildOf(transform) || candidate.distance <= 0f)
+                continue;
+
+            if (candidate.distance < hitDistance)
+            {
+                hitDistance = candidate.distance;
+                hit = true;
+            }
+        }
+
+        return hit;
+    }
+
+    private bool TryGetSolidBounds(out Bounds bounds)
+    {
+        bounds = default;
+        bool any = false;
+        foreach (Collider solid in GetComponentsInChildren<Collider>())
+        {
+            if (!solid.enabled || solid.isTrigger)
+                continue;
+
+            if (any)
+                bounds.Encapsulate(solid.bounds);
+            else
+                bounds = solid.bounds;
+
+            any = true;
+        }
+
+        return any;
     }
 
     public void SetDrag(bool drag, Transform dragger)
@@ -162,13 +255,13 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
     {
         _dragger = drag ? dragger : null;
         _draggerObject = _dragger != null ? _dragger.GetComponent<NetworkObject>() : null;
+        _breakOverSeconds = 0f;
 
         if (_dragger == null)
             return;
 
-        _draggerToDragged = new Vector3(
-            transform.position.x - _dragger.position.x,
-            0f,
-            transform.position.z - _dragger.position.z);
+        Vector3 apart = transform.position - _dragger.position;
+        apart.y = 0f;
+        _restDistance = DragRules.RestDistance(isBody: false, apart.magnitude);
     }
 }

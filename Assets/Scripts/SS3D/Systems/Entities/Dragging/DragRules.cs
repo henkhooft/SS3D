@@ -239,6 +239,30 @@ namespace SS3D.Systems.Entities.Dragging
         /// <summary>Metres per second of pull per metre the hips lie off the tether.</summary>
         public const float RagdollPullGain = 4f;
 
+        /// <summary>A swept furniture move stops this far short of what it hit.</summary>
+        public const float SweepSkin = 0.02f;
+
+        /// <summary>
+        /// The planar move a dragged piece of furniture makes this step: all of <paramref name="delta"/>, or up to
+        /// <see cref="SweepSkin"/> short of the first thing its collider's sweep hit. Never backwards.
+        /// </summary>
+        public static Vector3 SweptStep(Vector3 delta, bool hit, float hitDistance)
+        {
+            delta.y = 0f;
+            if (!hit)
+            {
+                return delta;
+            }
+
+            float length = delta.magnitude;
+            if (length < 0.0001f)
+            {
+                return Vector3.zero;
+            }
+
+            return delta * (Mathf.Clamp(hitDistance - SweepSkin, 0f, length) / length);
+        }
+
         /// <summary>True when the target has drifted far enough off the tether that its authority needs it again.</summary>
         public static bool NeedsResend(Vector3 target, Vector3 tether)
         {

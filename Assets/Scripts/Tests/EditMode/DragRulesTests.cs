@@ -331,6 +331,34 @@ namespace EditorTests
             Assert.IsFalse(DragRules.IsHandReservedByDrag(dragging: false, dragHand: HandSide.Left, hand: HandSide.Left));
         }
 
+        [Test]
+        public void Sweep_NothingInTheWayTakesTheWholeStep()
+        {
+            Vector3 step = DragRules.SweptStep(new Vector3(0.3f, 0f, 0.4f), hit: false, hitDistance: 0f);
+
+            Assert.AreEqual(new Vector3(0.3f, 0f, 0.4f), step);
+        }
+
+        [Test]
+        public void Sweep_StopsJustShortOfTheHit()
+        {
+            Vector3 step = DragRules.SweptStep(new Vector3(0.5f, 0f, 0f), hit: true, hitDistance: 0.2f);
+
+            Assert.AreEqual(0.2f - DragRules.SweepSkin, step.x, 1e-4f);
+        }
+
+        [Test]
+        public void Sweep_AlreadyTouchingDoesNotMoveOrBackUp()
+        {
+            Assert.AreEqual(Vector3.zero, DragRules.SweptStep(new Vector3(0.5f, 0f, 0f), hit: true, hitDistance: 0f));
+        }
+
+        [Test]
+        public void Sweep_StaysOnTheDeckPlane()
+        {
+            Assert.AreEqual(0f, DragRules.SweptStep(new Vector3(0.5f, 0.3f, 0f), hit: false, hitDistance: 0f).y);
+        }
+
         private static DragEndInputs Healthy() => new()
         {
             DraggerCanAct = true,

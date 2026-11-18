@@ -25,7 +25,7 @@ todos:
     status: completed
   - id: furniture-sweep
     content: "blind: Draggable furniture follows the rope instead of a fixed world offset; each server step sweeps its collider (SweepTest/BoxCast) against static geometry and closed door solids and stops at the hit"
-    status: pending
+    status: completed
   - id: airlock-hold
     content: "blind: AirLockOpener.IsDoorwayBlocked also counts dragged objects and dragged corpses, not only SpawnedPlayers"
     status: pending
@@ -158,6 +158,9 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 65 | The rope's hand is the hand that started the drag, replicated on the target (`IDragTarget.DraggerHand`) | SS3D | — |
 | 66 | Drop (Q) on the dragging hand and a click on its badge both send one owner ServerRpc, `HumanoidLivingController.CmdReleaseDrag` | SS3D | networking §2: the server resolves the caller's own drag |
 | 67 | The HUD refreshes the badge on `DragRegistry.Changed`, since starting a drag changes no hand contents | SS3D | `MainHudSubSystem.RefreshHandReservedState` |
+| 68 | The facing lock while dragging is gone: the rope trails whatever way the dragger faces, so walking turns the body as usual | adaptation | Decision 12; the lock only served the old fixed offset |
+| 69 | The furniture sweep is an axis-aligned box cast of the union of its solid colliders' bounds, lifted 6 cm off the floor, on Default + Walls; bodies and items don't stop it; it stops 2 cm short | SS3D + taste | `Draggable.TrySweep` |
+| 70 | Furniture runs the body end rules minus "target stood": dragger down, snag (2.5 m for 1 s), despawn, either over open space | SS3D | Decision 13 |
 
 ## Phases
 

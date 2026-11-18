@@ -281,16 +281,14 @@ namespace SS3D.Systems.Entities.Humanoid
             if (Input.magnitude != 0)
             {
                 MoveMovementTarget(Input);
-                if (!IsDragging)
+                // The rope trails whatever way the body faces (M13 Decision 12), so a drag no longer locks facing.
+                if (IsCombatMode())
                 {
-                    if (IsCombatMode())
-                    {
-                        RotatePlayerToCombatAim();
-                    }
-                    else
-                    {
-                        RotatePlayerToMovement();
-                    }
+                    RotatePlayerToCombatAim();
+                }
+                else
+                {
+                    RotatePlayerToMovement();
                 }
 
                 MovePlayer();
@@ -301,7 +299,7 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 MovePlayer();
                 MoveMovementTarget(Vector2.zero);
-                if (IsCombatMode() && !IsDragging)
+                if (IsCombatMode())
                 {
                     RotatePlayerToCombatAim();
                 }
@@ -385,7 +383,7 @@ namespace SS3D.Systems.Entities.Humanoid
             }
 
             MoveMovementTarget(Vector2.zero);
-            if (IsCombatMode() && !IsDragging)
+            if (IsCombatMode())
             {
                 RotatePlayerToCombatAim();
             }
@@ -402,16 +400,14 @@ namespace SS3D.Systems.Entities.Humanoid
             if (Input.magnitude != 0)
             {
                 MoveMovementTarget(Input);
-                if (!IsDragging)
+                // The rope trails whatever way the body faces (M13 Decision 12), so a drag no longer locks facing.
+                if (IsCombatMode())
                 {
-                    if (IsCombatMode())
-                    {
-                        RotatePlayerToCombatAim();
-                    }
-                    else
-                    {
-                        RotatePlayerToMovement();
-                    }
+                    RotatePlayerToCombatAim();
+                }
+                else
+                {
+                    RotatePlayerToMovement();
                 }
 
                 MovePlayer();
@@ -422,7 +418,7 @@ namespace SS3D.Systems.Entities.Humanoid
             {
                 MovePlayer();
                 MoveMovementTarget(Vector2.zero);
-                if (IsCombatMode() && !IsDragging)
+                if (IsCombatMode())
                 {
                     RotatePlayerToCombatAim();
                 }
