@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: body-drag-core
     content: "blind: body drag component (generalised Draggable or BodyDraggable): server computes the tether point and routes it to the target's physics authority (owner while alive, server for corpses and disconnected owners); CC/Downed mover with collision; ragdoll hips force for Critical/dead; re-send when > 1.5 m off; server-set IsBeingDragged snapshot bit (InteractWork pattern); Downed owner skips the crawl drive while it's set; end rules wired (dragger downed/knocked/dead, break, despawn, target stands, either party Floating, release)"
-    status: pending
+    status: completed
   - id: drag-interaction
     content: "blind: body-drag interaction filtered out (not greyed) on standing and knockdown bodies, 60° cone to the hips bone; no sprint while dragging, walk cap"
     status: pending
@@ -140,6 +140,16 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 47 | The throw recoil is resolved at release (`ServerLaunch`), not in `CmdThrow`, so a cancelled throw pushes nobody; the weight is read before the item leaves the hand | SS3D | Decision 13 of the animation pass (interrupted throws keep the item) |
 | 48 | A floating thrower with no owning client (combat dummy) gets no recoil | SS3D | owner-side movement |
 | 49 | One protocol bump (65 → 66) covers every wire change on this branch | SS3D | `ProtocolVersion` |
+| 50 | One drag per body: a dragger already dragging something can't start a second drag with the other hand | taste | `DragRegistry` maps one target per dragger |
+| 51 | The drag contract (`DragRules`, `DragRegistry`, `IDragTarget`) lives in `Systems/Entities/Dragging`, not Furniture: Furniture already depends on Entities, and the other way would add a G4 folder cycle | SS3D | `SystemsFolderCycleTests` |
+| 52 | The ragdoll pull servoes every free bone's planar velocity toward the rope's (gain 4 /s, response 10 /s, cap 2.5 m/s) rather than forcing the hips alone, so a corpse slides whole | adaptation | plan Risk 2 |
+| 53 | A dragged Downed body's controller catches up with the tether at up to 2.5 m/s (walk is 1.5), stepping slightly down to stay on the deck | taste | `BodyDraggable.StepController` |
+| 54 | The server re-sends the tether when it moved > 5 cm (at most 20 Hz), or every 0.5 s while the body lies > 1.5 m off it; corpses, orphans and the host's own body get it directly | SS3D | Decision 22 |
+| 55 | "Either party floats" on the server: the dragger's Floating snapshot, or no plenum under the dragger or under the body's hips | SS3D | `HumanoidSpaceSupport.IsUnsupportedAt` |
+| 56 | `Ragdoll.IsRagdollPhysicsAuthority` is public and delegates to the shared `BodyPhysicsAuthority` rule that the drag movers also use | SS3D | Decision 22 |
+| 57 | A body's position for the rope, the start range and the break rule is its hips while ragdolled, its root otherwise | SS3D | the ragdolled root lags the bones |
+| 58 | Only a standing (Locomotion) body may start a drag | SS3D | end rule "dragger down" |
+| 59 | `IsBeingDragged` takes bit 31, the last free bit of the packed body snapshot | SS3D | `BodyAnimationSnapshot.Pack` |
 
 ## Phases
 

@@ -4,6 +4,7 @@ using SS3D.Interactions;
 using SS3D.Interactions.Extensions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Inventory.Containers;
 using UnityEngine;
@@ -24,12 +25,8 @@ namespace SS3D.Systems.Furniture
 
         public string GetName(InteractionEvent interactionEvent)
         {
-            if (interactionEvent.Target.GetGameObject().TryGetComponent<Draggable>(out var draggable))
-            {
-                return draggable.Dragged ? "Drop" : "Drag";
-            }
-
-            return null;
+            IDragTarget target = interactionEvent.Target.GetGameObject().GetComponent<IDragTarget>();
+            return target == null ? null : target.Dragged ? "Drop" : "Drag";
         }
 
         public string GetGenericName() => "Drag";
@@ -59,18 +56,16 @@ namespace SS3D.Systems.Furniture
 
         public bool Start(InteractionEvent interactionEvent, InteractionReference reference)
         {
-            if (!interactionEvent.Target.GetGameObject().TryGetComponent<Draggable>(out var draggable))
+            IDragTarget target = interactionEvent.Target.GetGameObject().GetComponent<IDragTarget>();
+            if (target == null)
             {
                 return false;
             }
 
-            bool drag = !draggable.Dragged;
-            draggable.SetDrag(drag, interactionEvent.Source.GetComponentInParent<Entity>().gameObject.transform);
-
-            // The controller reads Dragged from the target itself, so a remote client's drag starts when the SyncVar
-            // arrives and ends when the target goes away.
-            interactionEvent.Source.GetComponentInParent<HumanoidLivingController>()?.SetDragTarget(drag ? draggable : null);
-
+            Transform dragger = interactionEvent.Source.GetComponentInParent<Entity>().transform;
+            // The controller reads the drag from the target's replicated dragger (DragRegistry), so a remote client's
+            // drag starts when the SyncVar arrives and ends when the target goes away.
+            target.ServerSetDrag(!target.Dragged, dragger);
             return false;
         }
 

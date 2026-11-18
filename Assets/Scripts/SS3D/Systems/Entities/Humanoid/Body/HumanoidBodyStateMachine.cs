@@ -310,6 +310,18 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             PublishSnapshot();
         }
 
+        /// <summary>Server: someone started or stopped dragging this body (M13 Decision 24).</summary>
+        public void SetBeingDragged(bool dragged)
+        {
+            if (!IsServer || _snapshot.IsBeingDragged == dragged)
+            {
+                return;
+            }
+
+            _snapshot.IsBeingDragged = dragged;
+            PublishSnapshot();
+        }
+
         public void SetInjuredArms(float left, float right)
         {
             // SyncVars are server-authoritative. Assigning on a pure client spam-logs

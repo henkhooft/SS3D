@@ -42,6 +42,23 @@ namespace SS3D.Tests.EditMode
             Assert.IsFalse(BodyAnimationSnapshot.Default.Equals(snapshot), "A wall-work change republishes the snapshot");
         }
 
+        // Guards: M13's being-dragged flag has the last free bit and must not disturb the wall-work bit below it
+        [Test]
+        public void Pack_RoundTripsIsBeingDragged_InTheTopBit()
+        {
+            BodyAnimationSnapshot snapshot = BodyAnimationSnapshot.Default;
+            snapshot.IsBeingDragged = true;
+
+            uint packed = snapshot.Pack();
+            BodyAnimationSnapshot unpacked = BodyAnimationSnapshot.Unpack(packed, 0f, 0f, 0f, 0f, 0f, 0f, 0f);
+
+            Assert.AreEqual(1u << 31, packed & (1u << 31));
+            Assert.IsTrue(unpacked.IsBeingDragged);
+            Assert.IsFalse(unpacked.InteractWork);
+            Assert.IsFalse(unpacked.IsDragging);
+            Assert.IsFalse(BodyAnimationSnapshot.Default.Equals(snapshot), "A drag change republishes the snapshot");
+        }
+
         [Test]
         public void Pack_RoundTripsInteractKneel_NextToTheRangedHoldBits()
         {

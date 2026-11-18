@@ -8,6 +8,7 @@ using SS3D.Core.Behaviours;
 using SS3D.Interactions;
 using SS3D.Interactions.Interfaces;
 using SS3D.Systems.Entities;
+using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Furniture;
 using SS3D.Systems.Inventory.Interactions;
 using SS3D.Systems.Selection;
@@ -17,17 +18,46 @@ using UnityEngine;
 /// Put this script on things that can be dragged by a player, such as unbolted furnitures.
 /// </summary>
 [RequireComponent(typeof(Selectable))]
-public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider
+public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, IDragTarget
 {
     [SerializeField]
     private Transform _dragger;
 
     private Vector3 _draggerToDragged;
 
-    [SyncVar]
-    private bool _dragged;
+    /// <summary>The dragging body. Replicated so every peer's <see cref="DragRegistry"/> knows who drags what.</summary>
+    [SyncVar(OnChange = nameof(OnDraggerObjectChanged))]
+    private NetworkObject _draggerObject;
 
-    public bool Dragged => _dragged;
+    public bool Dragged => _draggerObject != null;
+
+    public NetworkObject DraggerObject => _draggerObject;
+
+    public GameObject GetGameObject() => gameObject;
+
+    private void OnDraggerObjectChanged(NetworkObject previous, NetworkObject next, bool asServer) =>
+        DragRegistry.OnDraggerChanged(this, previous, next);
+
+    public override void OnStopNetwork()
+    {
+        DragRegistry.Forget(this);
+        base.OnStopNetwork();
+    }
+
+    public bool CanBeDraggedBy(Transform dragger) =>
+        MayChangeDrag(true, dragger, Dragged ? _dragger : null, transform.position) && (Dragged || !IsLocked);
+
+    public void ServerSetDrag(bool drag, Transform dragger)
+    {
+        if (drag && !Dragged && IsLocked)
+            return;
+
+        // Only the body dragging it lets go; a second body can't take it over (Decision 13).
+        if (Dragged && dragger != null && dragger != _dragger)
+            return;
+
+        ApplyDrag(drag, dragger);
+    }
 
     /// <summary>
     /// How far (horizontally) the server lets a client's body be from this object when it starts a drag. Generous,
@@ -37,7 +67,7 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider
 
     public IInteraction[] CreateTargetInteractions(InteractionEvent interactionEvent)
     {
-        if (!_dragged && IsLocked)
+        if (!Dragged && IsLocked)
             return System.Array.Empty<IInteraction>();
 
         DragInteraction dragInteraction = new DragInteraction();
@@ -54,8 +84,15 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider
 
     private void HandleUpdate(ref EventContext context, in UpdateEvent e)
     {
-        if (!IsServer || !_dragged || _dragger == null)
+        if (!IsServer || !Dragged)
             return;
+
+        if (_dragger == null)
+        {
+            // The dragger despawned.
+            ApplyDrag(false, null);
+            return;
+        }
 
         transform.position =
             new Vector3(_dragger.position.x, transform.position.y, _dragger.position.z) + _draggerToDragged;
@@ -65,10 +102,7 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider
     {
         if (IsServer)
         {
-            if (drag && !_dragged && IsLocked)
-                return;
-
-            ApplyDrag(drag, dragger);
+            ServerSetDrag(drag, dragger);
             return;
         }
 
@@ -85,13 +119,10 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider
         if (!SubSystems.TryGet(out EntitySubSystem entities) || !entities.TryGetOwnedEntity(conn, out Entity entity))
             return;
 
-        if (!MayChangeDrag(drag, entity.transform, _dragged ? _dragger : null, transform.position))
+        if (!MayChangeDrag(drag, entity.transform, Dragged ? _dragger : null, transform.position))
             return;
 
-        if (drag && !_dragged && IsLocked)
-            return;
-
-        ApplyDrag(drag, entity.transform);
+        ServerSetDrag(drag, entity.transform);
     }
 
     /// <summary>Server rule for a client's drag request; pure, so EditMode can test it.</summary>
@@ -113,8 +144,8 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider
 
     private void ApplyDrag(bool drag, Transform dragger)
     {
-        _dragged = drag;
-        _dragger = dragger;
+        _dragger = drag ? dragger : null;
+        _draggerObject = _dragger != null ? _dragger.GetComponent<NetworkObject>() : null;
 
         if (_dragger == null)
             return;

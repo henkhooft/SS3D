@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using SS3D.Systems.Entities.Humanoid;
+using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Furniture;
 using UnityEngine;
 
@@ -183,6 +184,113 @@ namespace EditorTests
             Vector3 tether = new(1f, 0f, 0f);
             Assert.IsFalse(DragRules.NeedsResend(new Vector3(2f, 0f, 0f), tether));
             Assert.IsTrue(DragRules.NeedsResend(new Vector3(2.6f, 0f, 0f), tether));
+        }
+
+        [Test]
+        public void Mover_StepsTowardTheTetherAtMostMaxSpeed()
+        {
+            Vector3 step = DragRules.MoverStep(Vector3.zero, new Vector3(3f, 0f, 0f), 2f, 0.1f);
+
+            Assert.AreEqual(0.2f, step.x, 1e-4f);
+            Assert.AreEqual(0f, step.y);
+        }
+
+        [Test]
+        public void Mover_DoesNotOvershoot()
+        {
+            Vector3 step = DragRules.MoverStep(Vector3.zero, new Vector3(0.05f, 0f, 0f), 2f, 0.1f);
+
+            Assert.AreEqual(0.05f, step.x, 1e-4f);
+        }
+
+        [Test]
+        public void Mover_StaysOnTheDeckPlane()
+        {
+            Assert.AreEqual(0f, DragRules.MoverStep(Vector3.zero, new Vector3(1f, 2f, 0f), 2f, 0.1f).y);
+        }
+
+        [Test]
+        public void RagdollPull_SlackRopeLeavesTheBodyAlone()
+        {
+            Vector3 hips = new(1f, 0.2f, 0f);
+
+            Assert.IsFalse(DragRules.TryGetRagdollPullVelocity(hips, hips, 2f, out _));
+        }
+
+        [Test]
+        public void RagdollPull_TautRopePullsAlongTheDeckCappedAtMaxSpeed()
+        {
+            Assert.IsTrue(DragRules.TryGetRagdollPullVelocity(new Vector3(3f, 0.2f, 0f), new Vector3(1f, 0.2f, 0f), 2f,
+                out Vector3 velocity));
+
+            Assert.AreEqual(-2f, velocity.x, 1e-4f);
+            Assert.AreEqual(0f, velocity.y);
+        }
+
+        [TestCase(true, false, false, true, true)]   // a corpse: the server
+        [TestCase(true, true, true, false, false)]   // a corpse on its old owner's client: not them
+        [TestCase(false, true, true, false, true)]   // a living owner
+        [TestCase(false, true, false, true, false)]  // the server, for a body somebody owns
+        [TestCase(false, false, false, true, true)]  // no owner (disconnected, or a dummy): the server
+        public void Authority_OwnerWhileAliveServerForCorpsesAndOrphans(
+            bool dead, bool ownerValid, bool isOwner, bool isServer, bool expected)
+        {
+            Assert.AreEqual(expected, BodyPhysicsAuthority.IsAuthority(dead, ownerValid, isOwner, isServer));
+        }
+
+        [Test]
+        public void Registry_TracksWhoDragsWhat()
+        {
+            object dragger = new(), target = new(), other = new();
+            DragRegistry.Clear();
+
+            DragRegistry.OnDraggerChanged(target, null, dragger);
+            Assert.IsTrue(DragRegistry.TryGetTarget(dragger, out object found));
+            Assert.AreSame(target, found);
+            Assert.IsFalse(DragRegistry.TryGetTarget(other, out _));
+
+            DragRegistry.OnDraggerChanged(target, dragger, null);
+            Assert.IsFalse(DragRegistry.TryGetTarget(dragger, out _));
+        }
+
+        [Test]
+        public void Registry_RepeatedChangesAreIdempotent()
+        {
+            // A host gets every SyncVar change twice, as server and as client.
+            object dragger = new(), target = new();
+            DragRegistry.Clear();
+
+            DragRegistry.OnDraggerChanged(target, null, dragger);
+            DragRegistry.OnDraggerChanged(target, null, dragger);
+            DragRegistry.OnDraggerChanged(target, dragger, null);
+            DragRegistry.OnDraggerChanged(target, dragger, null);
+
+            Assert.IsFalse(DragRegistry.TryGetTarget(dragger, out _));
+        }
+
+        [Test]
+        public void Registry_ALateClearFromAnOldTargetDoesNotDropANewerDrag()
+        {
+            object dragger = new(), first = new(), second = new();
+            DragRegistry.Clear();
+
+            DragRegistry.OnDraggerChanged(second, null, dragger);
+            DragRegistry.OnDraggerChanged(first, dragger, null);
+
+            Assert.IsTrue(DragRegistry.TryGetTarget(dragger, out object found));
+            Assert.AreSame(second, found);
+        }
+
+        [Test]
+        public void Registry_ForgettingATargetDropsItsDrag()
+        {
+            object dragger = new(), target = new();
+            DragRegistry.Clear();
+            DragRegistry.OnDraggerChanged(target, null, dragger);
+
+            DragRegistry.Forget(target);
+
+            Assert.IsFalse(DragRegistry.TryGetTarget(dragger, out _));
         }
 
         private static DragEndInputs Healthy() => new()

@@ -516,25 +516,11 @@ namespace SS3D.Systems.Entities.Humanoid
         }
 
         /// <summary>
-        /// Who runs non-kinematic ragdoll physics (and sends bone NetworkTransforms).
+        /// Who runs non-kinematic ragdoll physics (and sends bone NetworkTransforms). Mindless bodies (combat dummies)
+        /// fall back to the server, or their bones stay kinematic and freeze; observers stay kinematic.
         /// </summary>
-        private bool IsRagdollPhysicsAuthority()
-        {
-            if (_deathRagdoll)
-            {
-                return IsServer;
-            }
-
-            // Mindless bodies (combat dummies) have no owning client to simulate a living
-            // knockdown; without a server fallback the bones stay kinematic and the body
-            // freezes in its last animated pose. Observers must still stay kinematic.
-            if (!Owner.IsValid)
-            {
-                return IsServer;
-            }
-
-            return IsOwner;
-        }
+        public bool IsRagdollPhysicsAuthority() =>
+            BodyPhysicsAuthority.IsAuthority(_deathRagdoll, Owner.IsValid, IsOwner, IsServer);
 
         private void RagdollBehavior()
         {

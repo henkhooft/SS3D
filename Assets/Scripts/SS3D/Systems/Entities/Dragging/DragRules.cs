@@ -1,7 +1,7 @@
 using SS3D.Systems.Entities.Humanoid;
 using UnityEngine;
 
-namespace SS3D.Systems.Furniture
+namespace SS3D.Systems.Entities.Dragging
 {
     /// <summary>Why a drag ended; <see cref="None"/> while it goes on.</summary>
     public enum DragEndReason
@@ -175,6 +175,41 @@ namespace SS3D.Systems.Furniture
 
             return DragEndReason.None;
         }
+
+        /// <summary>How fast a dragged Downed body's mover may catch up with the tether, so it keeps up with a walking dragger.</summary>
+        public const float CatchUpSpeed = 2.5f;
+
+        /// <summary>
+        /// One frame of a character-controller body (Downed) following the tether: planar, at most
+        /// <paramref name="maxSpeed"/>, never past the tether.
+        /// </summary>
+        public static Vector3 MoverStep(Vector3 position, Vector3 tether, float maxSpeed, float seconds)
+        {
+            Vector3 toTether = tether - position;
+            toTether.y = 0f;
+            return Vector3.ClampMagnitude(toTether, maxSpeed * seconds);
+        }
+
+        /// <summary>
+        /// The velocity a taut rope asks of a ragdoll (Critical or dead): planar, toward the tether, capped at
+        /// <paramref name="maxSpeed"/>. False on a slack rope, which leaves the body to its own physics.
+        /// </summary>
+        public static bool TryGetRagdollPullVelocity(Vector3 hips, Vector3 tether, float maxSpeed, out Vector3 velocity)
+        {
+            Vector3 toTether = tether - hips;
+            toTether.y = 0f;
+            if (toTether.sqrMagnitude < 0.0025f)
+            {
+                velocity = Vector3.zero;
+                return false;
+            }
+
+            velocity = Vector3.ClampMagnitude(toTether * RagdollPullGain, maxSpeed);
+            return true;
+        }
+
+        /// <summary>Metres per second of pull per metre the hips lie off the tether.</summary>
+        public const float RagdollPullGain = 4f;
 
         /// <summary>True when the target has drifted far enough off the tether that its authority needs it again.</summary>
         public static bool NeedsResend(Vector3 target, Vector3 tether)

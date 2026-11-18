@@ -48,6 +48,8 @@ namespace SS3D.Systems.Entities.Humanoid.Body
         public bool InteractKneel;
         /// <summary>The body works at a wall for a construction step while this is set (server).</summary>
         public bool InteractWork;
+        /// <summary>Someone drags this body (server). A Downed owner stops crawling while it's set (M13 Decision 14).</summary>
+        public bool IsBeingDragged;
 
         public uint Pack()
         {
@@ -69,6 +71,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
             if (OffHandBusy) packed |= 1u << 28;
             if (InteractKneel) packed |= 1u << 29;
             if (InteractWork) packed |= 1u << 30;
+            if (IsBeingDragged) packed |= 1u << 31;
             return packed;
         }
 
@@ -101,6 +104,7 @@ namespace SS3D.Systems.Entities.Humanoid.Body
                 OffHandBusy = (packed & (1u << 28)) != 0,
                 InteractKneel = (packed & (1u << 29)) != 0,
                 InteractWork = (packed & (1u << 30)) != 0,
+                IsBeingDragged = (packed & (1u << 31)) != 0,
                 AimYaw = aimYaw,
                 AimPitch = aimPitch,
                 MovementSpeed = (float)Math.Sqrt(movementVelX * movementVelX + movementVelZ * movementVelZ),

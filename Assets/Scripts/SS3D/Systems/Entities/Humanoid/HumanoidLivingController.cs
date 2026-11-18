@@ -1,6 +1,7 @@
 using FishNet.Connection;
 using SS3D.Core;
 using SS3D.Systems.Entities.Humanoid.Body;
+using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Health;
 using SS3D.Systems.Inventory.Items;
 using SS3D.Systems.Stamina;
@@ -25,17 +26,15 @@ namespace SS3D.Systems.Entities.Humanoid
         private EvaGearController _evaGear;
         private HumanHealthController _healthController;
 
-        private Draggable _dragTarget;
-
         /// <summary>
-        /// True while the object this body started dragging still exists and is still dragged. Read from the object
-        /// rather than stored, so a drag that ends any other way (the object blows up, is deleted or the server lets go)
-        /// frees the body to turn again (#1535).
+        /// True while this body drags something. Read from the replicated dragger on the target (<see cref="DragRegistry"/>),
+        /// so it holds on a remote client too, and a drag that ends any other way (the object blows up, is deleted or the
+        /// server lets go) frees the body to turn again (#1535).
         /// </summary>
-        public bool IsDragging => _dragTarget != null && _dragTarget.Dragged;
+        public bool IsDragging => DragRegistry.TryGetTarget(NetworkObject, out _);
 
-        /// <summary>Called by <see cref="Furniture.DragInteraction"/> when this body starts (or, with null, stops) a drag.</summary>
-        public void SetDragTarget(Draggable target) => _dragTarget = target;
+        /// <summary>What this body drags, or null.</summary>
+        public IDragTarget DragTarget => DragRegistry.TryGetTarget(NetworkObject, out object target) ? target as IDragTarget : null;
 
         /// <summary>Exhausted bodies move slower; feet slow by the same factor (ExertionPenalty is a SyncVar, so remotes match).</summary>
         public override float LocomotionPlaybackRate => GearSpeedFactor * (_staminaController != null
@@ -241,6 +240,11 @@ namespace SS3D.Systems.Entities.Humanoid
             bool coasting = ShouldCoast(support);
             // Avoid publishing walk Speed the same frame we enter space float (clears Floating via gait).
             ProcessPlayerInput(publishSpeed: !coasting);
+            if (BodyStateMachine != null && BodyStateMachine.Snapshot.IsBeingDragged)
+            {
+                // A dragged Downed body holds still: the rope moves it (M13 Decision 14).
+                Input = Vector2.zero;
+            }
 
             if (TryProcessSpaceFloat(support))
             {
