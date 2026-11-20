@@ -49,7 +49,7 @@ namespace SS3D.Systems.Entities.Dragging
     public static class DragRules
     {
         /// <summary>A dragged body trails this far behind the dragger.</summary>
-        public const float BodyRestDistance = 1f;
+        public const float BodyRestDistance = 0.8f;
 
         /// <summary>Furniture keeps the distance it was picked up at, up to this.</summary>
         public const float FurnitureMaxRestDistance = 1.5f;
@@ -237,7 +237,7 @@ namespace SS3D.Systems.Entities.Dragging
         }
 
         /// <summary>Metres per second of pull per metre the hips lie off the tether.</summary>
-        public const float RagdollPullGain = 4f;
+        public const float RagdollPullGain = 8f;
 
         /// <summary>A swept furniture move stops this far short of what it hit.</summary>
         public const float SweepSkin = 0.02f;

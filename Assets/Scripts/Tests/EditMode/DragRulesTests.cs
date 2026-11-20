@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using SS3D.Interactions;
 using SS3D.Systems.Entities.Humanoid;
 using SS3D.Systems.Entities.Dragging;
 using SS3D.Systems.Furniture;
@@ -56,10 +57,11 @@ namespace EditorTests
         }
 
         [Test]
-        public void RestDistance_BodiesTrailAtOneMetre()
+        public void RestDistance_BodiesTrailAtEightyCentimetres()
         {
-            Assert.AreEqual(1f, DragRules.RestDistance(isBody: true, startDistance: 2.2f), 1e-4f);
-            Assert.AreEqual(1f, DragRules.RestDistance(isBody: true, startDistance: 0.3f), 1e-4f);
+            // Owner hand test 2026-11-20: a metre plus the pull's lag left too wide a gap.
+            Assert.AreEqual(0.8f, DragRules.RestDistance(isBody: true, startDistance: 2.2f), 1e-4f);
+            Assert.AreEqual(0.8f, DragRules.RestDistance(isBody: true, startDistance: 0.3f), 1e-4f);
         }
 
         [Test]
@@ -219,6 +221,30 @@ namespace EditorTests
         }
 
         [Test]
+        public void RagdollPull_AQuarterMetreOffPullsAtTwoMetresPerSecond()
+        {
+            // Gain 8 /s: at walking pace (1.5 m/s) a body trails under 0.2 m past the rope's length.
+            Assert.IsTrue(DragRules.TryGetRagdollPullVelocity(new Vector3(1.25f, 0.2f, 0f), new Vector3(1f, 0.2f, 0f), 2.5f,
+                out Vector3 velocity));
+
+            Assert.AreEqual(-2f, velocity.x, 1e-4f);
+        }
+
+        [Test]
+        public void DragInteraction_NamesItsOwnTarget_EvenWhenTheEventsTargetHasNoObject()
+        {
+            // The radial menu passes one event for every petal, aimed at the object's first target (a locker's Locker,
+            // which isn't an IGameObjectProvider), so the interaction must not dig its target out of the event.
+            StubTarget target = new();
+            DragInteraction drag = new(target);
+            InteractionEvent menuEvent = new(null, null);
+
+            Assert.AreEqual("Drag", drag.GetName(menuEvent));
+            target.Dragged = true;
+            Assert.AreEqual("Drop", drag.GetName(menuEvent));
+        }
+
+        [Test]
         public void RagdollPull_TautRopePullsAlongTheDeckCappedAtMaxSpeed()
         {
             Assert.IsTrue(DragRules.TryGetRagdollPullVelocity(new Vector3(3f, 0.2f, 0f), new Vector3(1f, 0.2f, 0f), 2f,
@@ -370,6 +396,18 @@ namespace EditorTests
 
             DragRegistry.OnDraggerChanged(target, dragger, null);
             CollectionAssert.IsEmpty(DragRegistry.Targets);
+        }
+
+        private sealed class StubTarget : IDragTarget
+        {
+            public bool Dragged { get; set; }
+            public FishNet.Object.NetworkObject DraggerObject => null;
+            public HandSide DraggerHand => HandSide.Right;
+            public GameObject GetGameObject() => null;
+            public Vector3 FootprintPosition => Vector3.zero;
+            public bool CanBeDraggedBy(Transform dragger) => true;
+            public bool IsInStartCone(Transform dragger) => true;
+            public void ServerSetDrag(bool drag, Transform dragger, HandSide hand = HandSide.Right) => Dragged = drag;
         }
 
         private static DragEndInputs Healthy() => new()

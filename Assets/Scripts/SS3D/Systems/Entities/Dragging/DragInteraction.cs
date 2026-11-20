@@ -15,6 +15,21 @@ namespace SS3D.Systems.Entities.Dragging
     /// </summary>
     public class DragInteraction : IInteraction, IClientInteractionSource
     {
+        /// <summary>
+        /// The target that offered this interaction. The radial menu names every petal from one event aimed at the
+        /// object's first interaction target, which for a locker is <c>Locker</c> (no <c>IGameObjectProvider</c>), so the
+        /// target can't be read back from the event.
+        /// </summary>
+        private readonly IDragTarget _target;
+
+        public DragInteraction(IDragTarget target = null)
+        {
+            _target = target;
+        }
+
+        private IDragTarget ResolveTarget(InteractionEvent interactionEvent) =>
+            _target ?? interactionEvent?.Target?.GetGameObject()?.GetComponent<IDragTarget>();
+
         public string Name;
         public Sprite Icon;
         /// <summary>
@@ -27,7 +42,7 @@ namespace SS3D.Systems.Entities.Dragging
 
         public string GetName(InteractionEvent interactionEvent)
         {
-            IDragTarget target = interactionEvent.Target.GetGameObject().GetComponent<IDragTarget>();
+            IDragTarget target = ResolveTarget(interactionEvent);
             return target == null ? null : target.Dragged ? "Drop" : "Drag";
         }
 
@@ -49,7 +64,7 @@ namespace SS3D.Systems.Entities.Dragging
                 return false;
             }
 
-            IDragTarget target = interactionEvent.Target?.GetGameObject()?.GetComponent<IDragTarget>();
+            IDragTarget target = ResolveTarget(interactionEvent);
             Entity entity = hand.GetComponentInParent<Entity>();
             if (target == null || entity == null)
             {
@@ -71,7 +86,7 @@ namespace SS3D.Systems.Entities.Dragging
 
         public bool Start(InteractionEvent interactionEvent, InteractionReference reference)
         {
-            IDragTarget target = interactionEvent.Target.GetGameObject().GetComponent<IDragTarget>();
+            IDragTarget target = ResolveTarget(interactionEvent);
             if (target == null)
             {
                 return false;

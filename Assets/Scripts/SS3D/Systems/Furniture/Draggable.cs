@@ -88,7 +88,7 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
         if (!Dragged && IsLocked)
             return System.Array.Empty<IInteraction>();
 
-        DragInteraction dragInteraction = new DragInteraction();
+        DragInteraction dragInteraction = new DragInteraction(this);
         return new IInteraction[] { dragInteraction };
     }
 
@@ -103,6 +103,11 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
     /// <summary>Rope length, set when the drag starts (<see cref="DragRules.RestDistance"/>).</summary>
     private float _restDistance;
     private float _breakOverSeconds;
+
+    /// <summary>The solid colliders' box relative to the transform, captured when the drag starts.</summary>
+    private Vector3 _sweepCentreOffset;
+    private Vector3 _sweepExtents;
+    private bool _hasSweepBox;
 
     private static readonly RaycastHit[] SweepHits = new RaycastHit[16];
     private static int _sweepMask = -1;
@@ -157,8 +162,13 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
     private bool TrySweep(Vector3 delta, out float hitDistance)
     {
         hitDistance = 0f;
-        if (!TryGetSolidBounds(out Bounds bounds))
+        if (!_hasSweepBox)
             return false;
+
+        // From the transform, not the colliders' bounds: with auto sync transforms off, a collider only catches up
+        // with this Update-rate move at the next physics step, so its bounds can already sit inside the wall, and a
+        // cast ignores what it starts inside (owner hand test 2026-11-20: a locker walked through a wall).
+        Bounds bounds = new(transform.position + _sweepCentreOffset, _sweepExtents * 2f);
 
         if (_sweepMask == -1)
             _sweepMask = LayerMask.GetMask("Default", "Walls");
@@ -265,5 +275,9 @@ public class Draggable : NetworkActor, IInteractionTarget, IGameObjectProvider, 
         Vector3 apart = transform.position - _dragger.position;
         apart.y = 0f;
         _restDistance = DragRules.RestDistance(isBody: false, apart.magnitude);
+        // At rest when the drag starts, so the colliders' bounds are in sync with the transform here.
+        _hasSweepBox = TryGetSolidBounds(out Bounds solid);
+        _sweepCentreOffset = solid.center - transform.position;
+        _sweepExtents = solid.extents;
     }
 }

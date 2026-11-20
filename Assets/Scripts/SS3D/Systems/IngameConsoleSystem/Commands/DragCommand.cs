@@ -84,7 +84,7 @@ namespace SS3D.Systems.IngameConsoleSystem.Commands
                 return "the selected hand isn't empty";
             }
 
-            DragInteraction drag = new() { RangeCheck = false, ConeCheck = false };
+            DragInteraction drag = new(body) { RangeCheck = false, ConeCheck = false };
             InteractionEvent interactionEvent = new(hand, body, body.FootprintPosition, Vector3.up);
             if (!drag.CanInteract(interactionEvent))
             {

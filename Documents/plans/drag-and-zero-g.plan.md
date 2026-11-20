@@ -171,6 +171,11 @@ Design docs are owner-only, so these are the plan's assumptions until the owner 
 | 78 | The drag smoke line is `drag 1 nightly` in `smoke-set.txt`, so labelled-PR smoke runs don't grow | SS3D | testing philosophy D5 |
 | 79 | The zero-g scenarios suspend and restore the host's invincibility: a map-editor scenario earlier in the category leaves it on and a later one relies on it, and an invincible walker never floats | SS3D | `EntityInvincibility`; pre-existing test leak |
 | 80 | `docs-sync` was not run by the build session: `update-system-docs` is user-invoke-only, so the maps, M13 status and catalog rows U7/U31 wait for the owner's `/update-system-docs` | SS3D | skill frontmatter `disable-model-invocation` |
+| 81 | Owner hand test 2026-11-20: a body's rope is 0.8 m (was 1.0) and the ragdoll pull gain 8 /s (was 4), because the gap behind the dragger looked too wide | owner | hand test |
+| 82 | Dragged ragdoll bones get angular damping 8 while the rope pulls them, so floor friction no longer rolls the body over and over | adaptation | owner hand test 2026-11-20 |
+| 83 | `DragInteraction` keeps the target that offered it: the radial menu names petals from one event aimed at the object's first target (a locker's `Locker`, no `IGameObjectProvider`), which NRE'd | SS3D | owner hand test 2026-11-20 |
+| 84 | The furniture sweep casts a box captured relative to the transform at drag start, not the colliders' live bounds: with auto sync transforms off those lag the Update-rate move, the cast starts inside the wall and ignores it | SS3D | `scenarios:Drag` on the owner's machine |
+| 85 | The dragger-side lag of a living ragdoll (owner-authority round trip) is left as is for now; server authority over a dragged ragdoll is the next step if the hand test still finds it laggy | owner | owner question 1; hand test 2026-11-20 |
 
 ## Phases
 

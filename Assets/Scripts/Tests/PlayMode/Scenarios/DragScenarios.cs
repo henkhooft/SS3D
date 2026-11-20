@@ -163,8 +163,8 @@ namespace SS3D.Tests
             Assert.IsNull(Run(dummy.gameObject, "Drag"), "The corpse drags");
             yield return WaitFor(() => drag.Dragged, "the drag starts");
 
-            // Through the door: the corpse trails a metre behind, so it ends up lying in the doorway.
-            yield return WalkTo(new Vector3(doorway.x + east * 1.5f, 0f, doorway.z));
+            // Through the door: the corpse trails 0.8 m behind, so it ends up lying in the doorway.
+            yield return WalkTo(new Vector3(doorway.x + east * 1.3f, 0f, doorway.z));
             yield return Hold(1.5f);
             Assert.That(Mathf.Abs(drag.BodyPosition.x - doorway.x), Is.LessThan(0.65f), "The corpse lies in the doorway");
 

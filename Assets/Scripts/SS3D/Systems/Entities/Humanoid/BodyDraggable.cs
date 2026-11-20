@@ -38,6 +38,12 @@ namespace SS3D.Systems.Entities.Humanoid
         /// <summary>How quickly the dragged bones' velocity follows the rope, per second.</summary>
         private const float PullResponse = 10f;
 
+        /// <summary>Angular damping on dragged bones, so the pull slides a ragdoll instead of rolling it.</summary>
+        private const float PulledAngularDamping = 8f;
+
+        private float[] _boneAngularDamping;
+        private bool _spinDamped;
+
         [SyncVar(OnChange = nameof(OnDraggerObjectChanged))]
         private NetworkObject _draggerObject;
 
@@ -108,7 +114,7 @@ namespace SS3D.Systems.Entities.Humanoid
                 return System.Array.Empty<IInteraction>();
             }
 
-            return _dragInteractions ??= new IInteraction[] { new DragInteraction() };
+            return _dragInteractions ??= new IInteraction[] { new DragInteraction(this) };
         }
 
         public override void OnStartNetwork()
@@ -222,9 +228,36 @@ namespace SS3D.Systems.Entities.Humanoid
 
         private void FixedUpdate()
         {
-            if (_hasTether && IsMover() && _ragdoll.IsKnockedDown)
+            bool pulling = _hasTether && IsMover() && _ragdoll.IsKnockedDown;
+            if (pulling)
             {
                 PullBones();
+            }
+
+            if (pulling != _spinDamped)
+            {
+                SetSpinDamping(pulling);
+            }
+        }
+
+        /// <summary>
+        /// Floor friction turns the pull into spin, and an undamped ragdoll rolled over and over behind the dragger
+        /// (owner hand test, 2026-11-20). Bones resist spinning only while the rope pulls them.
+        /// </summary>
+        private void SetSpinDamping(bool on)
+        {
+            _spinDamped = on;
+            if (_bones == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _bones.Length; i++)
+            {
+                if (_bones[i] != null)
+                {
+                    _bones[i].angularDamping = on ? PulledAngularDamping : _boneAngularDamping[i];
+                }
             }
         }
 
@@ -368,9 +401,11 @@ namespace SS3D.Systems.Entities.Humanoid
             _hips = animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Hips) : null;
             RagdollPart[] parts = GetComponentsInChildren<RagdollPart>(true);
             _bones = new Rigidbody[parts.Length];
+            _boneAngularDamping = new float[parts.Length];
             for (int i = 0; i < parts.Length; i++)
             {
                 _bones[i] = parts[i].GetComponent<Rigidbody>();
+                _boneAngularDamping[i] = _bones[i] != null ? _bones[i].angularDamping : 0f;
             }
 
             return _ragdoll != null;
